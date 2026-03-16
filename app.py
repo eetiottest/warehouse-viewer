@@ -3,127 +3,70 @@ import pandas as pd
 import requests
 from PIL import Image
 from io import BytesIO
-import re
+import xml.etree.ElementTree as ET
 
 # Page setup
-st.set_page_config(
-    page_title="Warehouse Image Viewer",
-    page_icon="🏭",
-    layout="wide"
-)
-
-st.title("🏭 Warehouse Location Image Viewer")
+st.set_page_config(page_title="Warehouse Viewer", layout="wide")
+st.title("🏭 Warehouse Location Viewer")
 st.markdown("---")
 
-# Your public Drive folder URL
-FOLDER_URL = "https://drive.google.com/drive/folders/1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK"
-
-# Your Excel file
-excel_path = "data.xlsx"
+# Your public Drive folder ID
+FOLDER_ID = "1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK"
+FEED_URL = f"https://drive.google.com/embeddedfolderview?id={FOLDER_ID}#list"
 
 # Load Excel data
-try:
-    df = pd.read_excel(excel_path)
-    df.columns = df.columns.str.strip()
-    data_loaded = True
-except Exception as e:
-    df = pd.DataFrame()
-    data_loaded = False
+df = pd.read_excel("data.xlsx")
+df.columns = df.columns.str.strip()
 
-# SCRAPE folder names directly from the public Drive page
-def get_folder_names_from_drive(url):
-    """Extract folder names from public Google Drive HTML"""
+# --- AUTOMATIC FOLDER DETECTION (USING THE SAME FEED THAT SHOWS IMAGES) ---
+@st.cache_data
+def get_folders_from_drive_feed(url):
+    """Parses the public Drive XML feed to get folder names."""
+    folders = []
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers)
-        
+        response = requests.get(url)
         if response.status_code == 200:
-            # Look for folder names in the HTML
-            # This pattern matches the folder links in Drive
-            pattern = r'data-target="folder"[^>]*aria-label="([^"]+)"'
-            folders = re.findall(pattern, response.text)
-            
-            # Also try alternative pattern
-            if not folders:
-                pattern = r'folder-title">([^<]+)<'
-                folders = re.findall(pattern, response.text)
-            
-            # Clean up and return unique folder names
-            unique_folders = []
-            for f in folders:
-                if f and f not in unique_folders and not f.startswith('.'):
-                    unique_folders.append(f.strip())
-            
-            return unique_folders
-    except:
-        pass
-    return []
+            # The feed is XML, parse it
+            root = ET.fromstring(response.text)
+            # Find all entries that are folders (mime type)
+            for entry in root.findall('.//entry'):
+                mime_type_elem = entry.find('.//mimeType')
+                if mime_type_elem is not None and 'folder' in mime_type_elem.text:
+                    title_elem = entry.find('.//title')
+                    if title_elem is not None and title_elem.text:
+                        folders.append(title_elem.text)
+    except Exception as e:
+        st.error(f"Error reading feed: {e}")
+    return folders
 
-# Get folders automatically
-with st.spinner("Scanning Google Drive for folders..."):
-    subfolders = get_folder_names_from_drive(FOLDER_URL)
+with st.spinner("Detecting folders from Drive..."):
+    subfolders = get_folders_from_drive_feed(FEED_URL)
 
 if not subfolders:
-    st.error("""
-    ❌ Could not detect folders automatically.
-    
-    But your Drive URL is: """ + FOLDER_URL + """
-    
-    Please make sure the folder is public (Anyone with link can view)
-    """)
+    st.error(f"❌ Could not detect folders. Please ensure the folder is public: [Open Drive Folder](https://drive.google.com/drive/folders/{FOLDER_ID})")
     st.stop()
+else:
+    st.sidebar.success(f"✅ Auto-detected folders: {', '.join(subfolders)}")
 
-st.sidebar.success(f"✅ Automatically found {len(subfolders)} folders: {', '.join(subfolders)}")
-
-# Sidebar
+# --- SIDEBAR (USING AUTO-DETECTED FOLDERS) ---
 with st.sidebar:
     st.header("📍 Select Location")
-    selected_folder = st.selectbox(
-        "Choose location:",
-        options=[''] + sorted(subfolders)
-    )
-    
-    if selected_folder and data_loaded:
-        location_records = df[df['location'].str.startswith(selected_folder, na=False)]
-        st.info(f"📊 {len(location_records)} records in Excel")
+    selected_folder = st.selectbox("Choose location:", options=[''] + sorted(subfolders))
 
-# Main content
+    if selected_folder:
+        folder_records = df[df['location'].str.startswith(selected_folder, na=False)]
+        st.info(f"📊 {len(folder_records)} Excel records")
+
+# --- MAIN CONTENT ---
 if selected_folder:
-    st.subheader(f"📍 Location: **{selected_folder}**")
-    
-    if data_loaded:
-        location_data = df[df['location'].str.startswith(selected_folder, na=False)]
-        
-        if not location_data.empty:
-            search_term = st.text_input("🔍 Search:", placeholder="Type location code...")
-            
-            if search_term:
-                filtered_data = location_data[location_data['location'].str.contains(search_term, case=False)]
-            else:
-                filtered_data = location_data
-            
-            st.dataframe(filtered_data[['no', 'location', 'pallet_qr', 'is_pallet_present']])
-            
-            # Link to open folder
-            st.markdown(f"🔗 [Open folder in Drive]({FOLDER_URL}/{selected_folder})")
-        else:
-            st.warning("No records found in Excel for this location")
+    st.subheader(f"📍 **{selected_folder}**")
+    folder_data = df[df['location'].str.startswith(selected_folder, na=False)]
+    st.dataframe(folder_data[['no', 'location', 'pallet_qr', 'is_pallet_present']])
+    st.markdown(f"🔗 [Open Folder in Drive](https://drive.google.com/drive/folders/{FOLDER_ID}/{selected_folder})")
 else:
     st.info("👈 Select a location from the sidebar")
-    
-    if data_loaded and not df.empty:
-        st.markdown("### 📊 Data Overview")
-        st.dataframe(df.head(10))
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Total Records", len(df))
-        with col2:
-            yes_count = len(df[df['is_pallet_present'] == 'YES'])
-            st.metric("Pallets Present", yes_count)
-        with col3:
-            no_count = len(df[df['is_pallet_present'] == 'NO'])
-            st.metric("Empty Spots", no_count)
+    st.markdown("### 📊 Data Overview")
+    st.dataframe(df.head(10))
 
 st.markdown("---")
-st.caption("🏭 Warehouse Viewer - Automatically detects folders from Drive")
+st.caption("✅ Folders detected automatically from the public Drive feed.")
