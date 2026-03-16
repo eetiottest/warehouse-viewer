@@ -5,7 +5,8 @@ from PIL import Image
 from io import BytesIO
 import re
 import os
-import time
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 # Page setup
 st.set_page_config(
@@ -17,7 +18,7 @@ st.set_page_config(
 st.title("🏭 Warehouse Location Image Viewer")
 st.markdown("---")
 
-# Your Google Drive folder ID
+# Your public Google Drive folder ID
 FOLDER_ID = "1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK"
 
 # Your Excel file
@@ -32,44 +33,78 @@ except Exception as e:
     df = pd.DataFrame()
     data_loaded = False
 
-# Function to automatically get ALL subfolders from Google Drive
-def get_all_subfolders(folder_id):
+# REAL function to get ALL folders and images from Google Drive
+def get_drive_contents(folder_id):
     """
-    Automatically fetches ALL subfolder names from a public Google Drive folder
-    No hardcoding needed!
+    ACTUALLY gets all folders and images from Google Drive
+    No placeholders, no bullshit
     """
     try:
-        # Google Drive API endpoint to list files in a folder
-        api_url = f"https://www.googleapis.com/drive/v3/files"
+        # Using the public Drive API endpoint
+        api_key = "AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs"  # Public test key
         
-        # Parameters to get only folders
-        params = {
+        # First, get all subfolders
+        folders_url = "https://www.googleapis.com/drive/v3/files"
+        folders_params = {
             'q': f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
-            'fields': 'files(name, id)',
-            'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'  # Public API key for testing
+            'fields': 'files(id, name)',
+            'key': api_key
         }
         
-        response = requests.get(api_url, params=params)
-        if response.status_code == 200:
-            folders = response.json().get('files', [])
-            return [f['name'] for f in folders]
-    except:
-        pass
+        folders_response = requests.get(folders_url, params=folders_params)
+        
+        if folders_response.status_code != 200:
+            return None
+            
+        folders_data = folders_response.json().get('files', [])
+        
+        # For each folder, get its images
+        result = {}
+        for folder in folders_data:
+            folder_name = folder['name']
+            folder_id = folder['id']
+            
+            # Get images in this folder
+            images_params = {
+                'q': f"'{folder_id}' in parents and mimeType contains 'image/' and trashed=false",
+                'fields': 'files(id, name)',
+                'key': api_key
+            }
+            
+            images_response = requests.get(folders_url, params=images_params)
+            
+            if images_response.status_code == 200:
+                images = images_response.json().get('files', [])
+                result[folder_name] = [(img['name'], img['id']) for img in images]
+            else:
+                result[folder_name] = []
+        
+        return result
+        
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return None
+
+# Get REAL data from Drive
+with st.spinner("Scanning Google Drive folders..."):
+    drive_contents = get_drive_contents(FOLDER_ID)
+
+if not drive_contents:
+    st.error("""
+    ⚠️ Cannot access Google Drive folders.
     
-    # Fallback: If API fails, return empty list
-    return []
-
-# Get all subfolders automatically
-subfolders = get_all_subfolders(FOLDER_ID)
-
-# If no folders detected yet, show message but don't hardcode
-if not subfolders:
-    st.warning("⚠️ Waiting for Google Drive folder to be public...")
-    st.info("Please make your folder public (Anyone with link can view)")
-    st.markdown(f"🔗 [Click here to open your folder](https://drive.google.com/drive/folders/{FOLDER_ID})")
+    Make sure:
+    1. Your folder is public (Anyone with link can view)
+    2. The folder ID is correct: 1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK
+    3. You have images in subfolders
+    """)
     st.stop()
 
-# Sidebar - only the location selector
+# Get folder names automatically
+subfolders = list(drive_contents.keys())
+st.sidebar.success(f"✅ Found {len(subfolders)} folders automatically")
+
+# Sidebar
 with st.sidebar:
     st.header("📍 Select Location")
     selected_folder = st.selectbox(
@@ -77,61 +112,82 @@ with st.sidebar:
         options=[''] + sorted(subfolders)
     )
     
-    if selected_folder and data_loaded:
-        # Show count of records for this location
-        location_records = df[df['location'].str.startswith(selected_folder, na=False)]
-        st.info(f"📊 {len(location_records)} records in Excel")
+    if selected_folder:
+        image_count = len(drive_contents[selected_folder])
+        st.info(f"📸 {image_count} images found")
 
 # Main content
 if selected_folder:
     st.subheader(f"📍 Location: **{selected_folder}**")
     
+    # Get images for this folder
+    images = drive_contents[selected_folder]
+    
     # Search bar
-    search_term = st.text_input("🔍 Search images:", placeholder="Type location code...")
+    search_term = st.text_input("🔍 Search images:", placeholder="Type filename...")
     
-    # Filter Excel data for this location
-    if data_loaded:
-        location_data = df[df['location'].str.startswith(selected_folder, na=False)]
-        
-        if not location_data.empty:
-            # Show data table
-            st.dataframe(location_data[['no', 'location', 'pallet_qr', 'is_pallet_present']])
-            
-            st.success(f"✅ Found {len(location_data)} records for {selected_folder}")
-            
-            # Display placeholder for images
-            st.info("📸 Images will appear here once Google Drive API is fully configured")
-        else:
-            st.warning("No records found for this location")
+    # Filter images
+    if search_term:
+        filtered_images = [img for img in images if search_term.lower() in img[0].lower()]
     else:
-        st.error("Excel data not loaded")
-else:
-    st.info("👈 Select a location from the sidebar to begin")
+        filtered_images = images
     
-    # Show preview of data
+    st.write(f"📋 Found **{len(filtered_images)}** images")
+    
+    # Display images in grid
+    if filtered_images:
+        cols = st.columns(3)
+        
+        for idx, (img_name, img_id) in enumerate(filtered_images):
+            with cols[idx % 3]:
+                try:
+                    # Load image from Drive
+                    img_url = f"https://drive.google.com/uc?export=view&id={img_id}"
+                    response = requests.get(img_url)
+                    img = Image.open(BytesIO(response.content))
+                    st.image(img, use_container_width=True)
+                    
+                    # Extract location code
+                    location_code = img_name.split('.')[0]
+                    
+                    # Show Excel data if matches
+                    if data_loaded:
+                        match = df[df['location'] == location_code]
+                        if not match.empty:
+                            row = match.iloc[0]
+                            with st.expander(f"📄 Details"):
+                                st.write(f"**Record:** {row.get('no', 'N/A')}")
+                                st.write(f"**QR:** {row.get('pallet_qr', 'None')}")
+                                if row.get('is_pallet_present') == 'YES':
+                                    st.write("**Status:** ✅ Present")
+                                else:
+                                    st.write("**Status:** ❌ Empty")
+                    
+                    st.caption(f"📷 {img_name[:20]}...")
+                    
+                except Exception as e:
+                    st.error(f"Error: {e}")
+    else:
+        st.warning("No images match your search")
+        
+else:
+    st.info("👈 Select a location from the sidebar")
+    
+    # Show data preview
     if data_loaded and not df.empty:
         st.markdown("### 📊 Data Overview")
         st.dataframe(df.head(10))
         
-        # Summary stats
+        # Stats
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Total Records", len(df))
         with col2:
-            if 'is_pallet_present' in df.columns:
-                yes_count = len(df[df['is_pallet_present'] == 'YES'])
-                st.metric("Pallets Present", yes_count)
+            yes_count = len(df[df['is_pallet_present'] == 'YES'])
+            st.metric("Pallets Present", yes_count)
         with col3:
-            if 'is_pallet_present' in df.columns:
-                no_count = len(df[df['is_pallet_present'] == 'NO'])
-                st.metric("Empty Spots", no_count)
-        
-        # Show detected subfolders
-        if subfolders:
-            st.markdown("### 📁 Detected Locations")
-            st.write(f"Found {len(subfolders)} subfolders: {', '.join(subfolders[:10])}")
-            if len(subfolders) > 10:
-                st.write(f"... and {len(subfolders)-10} more")
+            no_count = len(df[df['is_pallet_present'] == 'NO'])
+            st.metric("Empty Spots", no_count)
 
 st.markdown("---")
-st.caption("🏭 Warehouse Viewer - Automatically Detects All Subfolders")
+st.caption("🏭 Warehouse Viewer - Automatically detects all folders and images")
