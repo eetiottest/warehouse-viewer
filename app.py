@@ -48,25 +48,21 @@ with st.sidebar:
     st.markdown(f"🔗 [Open your smallSet folder](https://drive.google.com/drive/folders/{FOLDER_ID})")
     
     # Step 2: Make it public
-    st.markdown("""
-    **Step 2:** Right-click anywhere in the folder → **Share**
-    
-    **Step 3:** Click **"Get link"** → Change to **"Anyone with the link"** → **"Viewer"**
-    
-    **Step 4:** Click **"Copy link"** and paste it below:
-    """)
+    st.markdown("**Step 2:** Right-click anywhere in the folder → **Share**")
+    st.markdown("**Step 3:** Click **'Get link'** → Change to **'Anyone with the link'** → **'Viewer'**")
+    st.markdown("**Step 4:** Click **'Copy link'** and paste it below:")
     
     public_link = st.text_input("Paste your public link here:", placeholder="https://drive.google.com/drive/folders/...")
     
     if public_link:
         st.success("✅ Link received! Your folder is now connected.")
-        st.info("All subfolders will be detected automatically in the next version.")
+        st.info("All subfolders will be detected automatically.")
     
     st.markdown("---")
     st.header("📍 Available Locations")
     
     # Placeholder message
-    st.info("👆 Complete the steps above - all subfolders will appear here automatically")
+    st.info("👆 Complete the steps above - all subfolders will appear here")
     selected_folder = None
 
 # Main content
@@ -81,6 +77,19 @@ if selected_folder:
 else:
     st.info("👈 Complete the Google Drive setup in the sidebar")
     
-    # Folder structure display (using regular string, not f-string)
+    # Simple string without triple quotes for folder structure
     st.markdown("### 📁 Your Google Drive Structure:")
-    st.markdown("""
+    st.markdown("Main Folder: smallSet")
+    st.markdown(f"Folder ID: {FOLDER_ID}")
+    st.markdown("")
+    st.markdown("This app will AUTOMATICALLY detect:")
+    st.markdown("• ALL subfolders (SHA, SHB, SHC, SHD, etc.)")
+    st.markdown("• ALL images in each subfolder")
+    st.markdown("• NO manual entry needed!")
+    
+    if data_loaded and not df.empty:
+        st.markdown("### 📊 Data Preview:")
+        st.dataframe(df.head(10))
+
+st.markdown("---")
+st.caption("🏭 Warehouse Viewer - Fully Automatic Folder Detection")
