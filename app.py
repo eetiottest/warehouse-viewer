@@ -15,8 +15,8 @@ st.set_page_config(
 st.title("🏭 Warehouse Location Image Viewer")
 st.markdown("---")
 
-# Your public Drive folder ID (where images are stored)
-FOLDER_ID = "1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK"
+# Your public Drive main folder ID
+MAIN_FOLDER_ID = "1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK"
 
 # Your Excel file
 excel_path = "data.xlsx"
@@ -25,152 +25,143 @@ excel_path = "data.xlsx"
 try:
     df = pd.read_excel(excel_path)
     df.columns = df.columns.str.strip()
-    
-    # Get ALL locations from Excel
-    excel_locations = set(df['location'].unique())
-    st.sidebar.success(f"✅ Excel loaded: {len(excel_locations)} locations")
-    
+    # Convert pallet_qr to string to avoid issues
+    if 'pallet_qr' in df.columns:
+        df['pallet_qr'] = df['pallet_qr'].astype(str)
+    data_loaded = True
+    st.sidebar.success(f"✅ Excel loaded: {len(df)} records")
 except Exception as e:
     st.error(f"❌ Error loading Excel: {e}")
     st.stop()
 
-# Function to get all images from Drive folder
-def get_all_images(folder_id):
-    """Returns dict of {filename: file_id} from Drive folder"""
+# Function to get all subfolders in main folder
+def get_subfolders(folder_id):
+    """Get all subfolder names and IDs"""
+    folders = {}
+    try:
+        url = "https://www.googleapis.com/drive/v3/files"
+        params = {
+            'q': f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+            'fields': 'files(id, name)',
+            'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'
+        }
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            for folder in response.json().get('files', []):
+                folders[folder['name']] = folder['id']
+    except Exception as e:
+        st.error(f"Error getting folders: {e}")
+    return folders
+
+# Function to get all images from a specific folder
+def get_images_from_folder(folder_id):
+    """Get all images from a folder, return dict of filename -> file_id"""
     images = {}
     try:
-        # Using the public Drive endpoint
         url = "https://www.googleapis.com/drive/v3/files"
         params = {
             'q': f"'{folder_id}' in parents and mimeType contains 'image/' and trashed=false",
             'fields': 'files(id, name)',
             'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'
         }
-        
         response = requests.get(url, params=params)
         if response.status_code == 200:
-            files = response.json().get('files', [])
-            for f in files:
-                # Remove extension to get location code
-                name = f['name']
-                location = name.rsplit('.', 1)[0]  # Removes .jpg, .png etc.
-                images[location] = {
-                    'file_id': f['id'],
-                    'filename': name
-                }
+            for img in response.json().get('files', []):
+                # Store by full filename
+                images[img['name']] = img['id']
     except Exception as e:
-        st.error(f"Error fetching images: {e}")
-    
+        st.error(f"Error getting images: {e}")
     return images
 
-# Get all images
-with st.spinner("Scanning Drive for images..."):
-    drive_images = get_all_images(FOLDER_ID)
+# Get all subfolders
+with st.spinner("Scanning for subfolders..."):
+    subfolders = get_subfolders(MAIN_FOLDER_ID)
 
-st.sidebar.success(f"📸 Found {len(drive_images)} images in Drive")
+if not subfolders:
+    st.error("❌ No subfolders found! Make sure main folder is public.")
+    st.stop()
 
-# Find which locations have images
-locations_with_images = set(drive_images.keys())
-all_locations = sorted(excel_locations.union(locations_with_images))
+st.sidebar.success(f"📁 Found subfolders: {', '.join(subfolders.keys())}")
 
 # Sidebar
 with st.sidebar:
-    st.header("📍 Select Location")
-    selected = st.selectbox(
-        "Choose location:",
-        options=[''] + all_locations
+    st.header("📍 Select Subfolder")
+    selected_subfolder = st.selectbox(
+        "Choose folder:",
+        options=[''] + sorted(subfolders.keys())
     )
     
-    if selected:
-        in_excel = selected in excel_locations
-        in_drive = selected in drive_images
+    if selected_subfolder:
+        # Get images from this subfolder
+        folder_id = subfolders[selected_subfolder]
+        folder_images = get_images_from_folder(folder_id)
+        st.info(f"📸 {len(folder_images)} images in this folder")
         
-        if in_excel:
-            excel_data = df[df['location'] == selected].iloc[0]
-            st.info(f"📊 Excel: {excel_data.get('no', 'N/A')}")
-            st.caption(f"QR: {excel_data.get('pallet_qr', 'None')}")
-            if excel_data.get('is_pallet_present') == 'YES':
-                st.caption("✅ Pallet present")
-            else:
-                st.caption("❌ No pallet")
-        
-        if in_drive:
-            st.success(f"📸 Image available")
-        elif selected:
-            st.warning("📸 No image in Drive")
+        # Store in session state
+        st.session_state['current_folder'] = selected_subfolder
+        st.session_state['current_images'] = folder_images
 
 # Main content
-if selected:
-    st.subheader(f"📍 Location: **{selected}**")
+if selected_subfolder and 'current_images' in st.session_state:
+    st.subheader(f"📍 Folder: **{selected_subfolder}**")
     
-    col1, col2 = st.columns(2)
+    images = st.session_state['current_images']
     
-    with col1:
-        st.markdown("### 📊 Excel Data")
-        if selected in excel_locations:
-            row = df[df['location'] == selected].iloc[0]
-            data = {
-                "Record No": row.get('no', 'N/A'),
-                "Location": row['location'],
-                "Pallet QR": row.get('pallet_qr', 'None'),
-                "Pallet Present": row.get('is_pallet_present', 'N/A')
-            }
-            st.json(data)
+    if images:
+        # Search
+        search = st.text_input("🔍 Search images:", placeholder="Type filename...")
+        
+        # Filter images
+        if search:
+            filtered = {name: id for name, id in images.items() 
+                       if search.lower() in name.lower()}
         else:
-            st.warning("No Excel data for this location")
-    
-    with col2:
-        st.markdown("### 📸 Image")
-        if selected in drive_images:
-            img_data = drive_images[selected]
-            img_url = f"https://drive.google.com/uc?export=view&id={img_data['file_id']}"
-            try:
-                response = requests.get(img_url)
-                img = Image.open(BytesIO(response.content))
-                st.image(img, use_container_width=True)
-                st.caption(f"Filename: {img_data['filename']}")
-            except:
-                st.error("Could not load image")
+            filtered = images
+        
+        st.write(f"📋 Found {len(filtered)} images")
+        
+        # Display in grid
+        if filtered:
+            cols = st.columns(3)
+            for idx, (filename, file_id) in enumerate(filtered.items()):
+                with cols[idx % 3]:
+                    try:
+                        # Load image
+                        img_url = f"https://drive.google.com/uc?export=view&id={file_id}"
+                        response = requests.get(img_url)
+                        img = Image.open(BytesIO(response.content))
+                        st.image(img, use_container_width=True)
+                        
+                        # Show filename
+                        st.caption(f"📄 {filename}")
+                        
+                        # Check Excel for matching location
+                        # Remove extension for matching
+                        location_match = filename.rsplit('.', 1)[0]
+                        excel_row = df[df['location'] == location_match]
+                        
+                        if not excel_row.empty:
+                            row = excel_row.iloc[0]
+                            with st.expander("📊 Excel Data"):
+                                st.write(f"**Record No:** {row.get('no', 'N/A')}")
+                                st.write(f"**QR:** {row.get('pallet_qr', 'None')}")
+                                if row.get('is_pallet_present') == 'YES':
+                                    st.write("**Status:** ✅ Present")
+                                else:
+                                    st.write("**Status:** ❌ Empty")
+                    except Exception as e:
+                        st.error(f"Error loading {filename}")
         else:
-            st.warning("No image in Drive")
-    
-    # Show both datasets
-    st.markdown("---")
-    st.markdown("### 🔍 Raw Data")
-    
-    col3, col4 = st.columns(2)
-    with col3:
-        st.markdown("**Excel Row**")
-        if selected in excel_locations:
-            st.dataframe(df[df['location'] == selected])
-    
-    with col4:
-        st.markdown("**Drive File**")
-        if selected in drive_images:
-            st.write(drive_images[selected])
-
+            st.warning("No images match search")
+    else:
+        st.warning("No images in this folder")
 else:
-    st.info("👈 Select a location from the sidebar")
+    st.info("👈 Select a subfolder from the sidebar")
     
-    # Statistics
-    st.markdown("### 📊 Overview")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Excel Locations", len(excel_locations))
-    with col2:
-        st.metric("Drive Images", len(drive_images))
-    with col3:
-        both = len(excel_locations.intersection(locations_with_images))
-        st.metric("Have Both", both)
-    
-    # Show samples
-    if excel_locations:
-        st.markdown("### 📋 Sample Excel Locations")
-        st.write(list(excel_locations)[:10])
-    
-    if locations_with_images:
-        st.markdown("### 📋 Sample Drive Images")
-        st.write(list(locations_with_images)[:10])
+    # Show Excel preview
+    if data_loaded:
+        st.markdown("### 📊 Excel Data Preview")
+        st.dataframe(df.head(10))
 
 st.markdown("---")
-st.caption("🏭 Warehouse Viewer - Matches by filename = location")
+st.caption("🏭 Warehouse Viewer - Browse subfolders, images match Excel by filename")
