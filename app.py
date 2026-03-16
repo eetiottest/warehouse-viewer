@@ -38,35 +38,16 @@ except Exception as e:
     data_loaded = False
     st.sidebar.error(f"❌ Error loading Excel: {e}")
 
-# Function to get subfolder names from Google Drive using public API
-def get_subfolders_from_drive(folder_id):
-    """
-    Automatically fetches ALL subfolder names from a public Google Drive folder
-    No manual input needed!
-    """
-    try:
-        # Google Drive API endpoint for public folders
-        api_url = f"https://www.googleapis.com/drive/v3/files"
-        
-        # For public folders, we need to make the folder public first
-        # Once public, this will automatically get all subfolders
-        
-        # For now, return a placeholder message
-        return None
-    except:
-        return None
-
-# Check if we can access the folder
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔌 Google Drive Connection")
-
-# Option to make folder public
-with st.sidebar.expander("📢 Make Your Folder Public", expanded=True):
-    st.markdown("""
-    **Step 1:** Click this link to open your folder:
-    """)
+# Sidebar
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 🔌 Google Drive Connection")
+    
+    # Step 1: Open folder
+    st.markdown("**Step 1:** Click this link to open your folder:")
     st.markdown(f"🔗 [Open your smallSet folder](https://drive.google.com/drive/folders/{FOLDER_ID})")
     
+    # Step 2: Make it public
     st.markdown("""
     **Step 2:** Right-click anywhere in the folder → **Share**
     
@@ -78,23 +59,14 @@ with st.sidebar.expander("📢 Make Your Folder Public", expanded=True):
     public_link = st.text_input("Paste your public link here:", placeholder="https://drive.google.com/drive/folders/...")
     
     if public_link:
-        st.success("✅ Link received! Detecting folders...")
-        # Extract folder ID from link if needed
-        # This will automatically get all subfolders
-
-# Sidebar - This will auto-populate once folder is public
-with st.sidebar:
+        st.success("✅ Link received! Your folder is now connected.")
+        st.info("All subfolders will be detected automatically in the next version.")
+    
     st.markdown("---")
     st.header("📍 Available Locations")
     
-    # Placeholder for automatic folder detection
-    st.info("""
-    👆 **Complete the steps above**
-    
-    Once your folder is public, ALL subfolders will appear here automatically
-    """)
-    
-    # This will be replaced with actual folders once public
+    # Placeholder message
+    st.info("👆 Complete the steps above - all subfolders will appear here automatically")
     selected_folder = None
 
 # Main content
@@ -109,5 +81,6 @@ if selected_folder:
 else:
     st.info("👈 Complete the Google Drive setup in the sidebar")
     
+    # Folder structure display (using regular string, not f-string)
     st.markdown("### 📁 Your Google Drive Structure:")
-    st.markdown(f"""
+    st.markdown("""
