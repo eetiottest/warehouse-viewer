@@ -17,7 +17,7 @@ st.title("🏭 Warehouse Location Image Viewer")
 st.markdown("---")
 
 # Your Google Drive folder ID
-FOLDER_ID = "1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK"
+MAIN_FOLDER_ID = "1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK"
 
 # Your Excel file
 excel_path = "data.xlsx"
@@ -31,67 +31,79 @@ except Exception as e:
     df = pd.DataFrame()
     data_loaded = False
 
-# FIRST: Get ALL subfolders automatically using the same logic
-# We'll store folder info here
-folder_info = {}  # folder_name -> folder_id
+# Function to get contents of a Google Drive folder (works for ANY folder)
+def get_folder_contents(folder_id):
+    """Returns list of (name, id, type) for all items in a folder"""
+    items = []
+    try:
+        # This is the SAME logic that works for images
+        page_token = None
+        while True:
+            url = "https://www.googleapis.com/drive/v3/files"
+            params = {
+                'q': f"'{folder_id}' in parents and trashed=false",
+                'fields': 'nextPageToken, files(id, name, mimeType)',
+                'pageSize': 100,
+                'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'
+            }
+            if page_token:
+                params['pageToken'] = page_token
+            
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                for file in data.get('files', []):
+                    if 'application/vnd.google-apps.folder' in file['mimeType']:
+                        items.append((file['name'], file['id'], 'folder'))
+                    elif 'image/' in file['mimeType']:
+                        items.append((file['name'], file['id'], 'image'))
+                
+                page_token = data.get('nextPageToken')
+                if not page_token:
+                    break
+            else:
+                break
+    except:
+        pass
+    return items
 
-try:
-    # Use the public Drive API to list folders
-    api_url = "https://www.googleapis.com/drive/v3/files"
-    params = {
-        'q': f"'{FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
-        'fields': 'files(id, name)',
-        'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'  # Public test key
-    }
-    
-    response = requests.get(api_url, params=params)
-    if response.status_code == 200:
-        folders = response.json().get('files', [])
-        for folder in folders:
-            folder_info[folder['name']] = folder['id']
-        st.sidebar.success(f"✅ Automatically found {len(folder_info)} folders")
-    else:
-        st.error("Could not fetch folders. Make sure your main folder is public.")
-        st.stop()
-        
-except Exception as e:
-    st.error(f"Error scanning folders: {e}")
-    st.stop()
+# Get ALL contents of main folder
+all_items = get_folder_contents(MAIN_FOLDER_ID)
 
-# Get folder names automatically
-subfolders = list(folder_info.keys())
+# Separate folders and images
+subfolders = [(name, id) for name, id, type in all_items if type == 'folder']
+images_in_main = [(name, id) for name, id, type in all_items if type == 'image']
 
-# Sidebar
+# Show what we found
+st.sidebar.success(f"✅ Found {len(subfolders)} subfolders and {len(images_in_main)} images in main folder")
+
+# Sidebar - folder selection
 with st.sidebar:
     st.header("📍 Select Location")
+    
+    folder_names = [name for name, _ in subfolders]
     selected_folder = st.selectbox(
         "Choose location:",
-        options=[''] + sorted(subfolders)
+        options=[''] + sorted(folder_names)
     )
     
     if selected_folder:
-        folder_id = folder_info[selected_folder]
+        # Get the folder ID for selected folder
+        folder_id = dict(subfolders)[selected_folder]
         
-        # Now get images in this folder
-        try:
-            img_params = {
-                'q': f"'{folder_id}' in parents and mimeType contains 'image/' and trashed=false",
-                'fields': 'files(id, name)',
-                'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'
-            }
-            
-            img_response = requests.get(api_url, params=img_params)
-            if img_response.status_code == 200:
-                images = img_response.json().get('files', [])
-                st.info(f"📸 {len(images)} images found")
-            else:
-                st.warning("Could not load images")
-        except:
-            st.warning("Error loading images")
+        # Get images in this subfolder
+        subfolder_items = get_folder_contents(folder_id)
+        folder_images = [(name, id) for name, id, type in subfolder_items if type == 'image']
+        st.info(f"📸 {len(folder_images)} images in this folder")
 
 # Main content
 if selected_folder:
     st.subheader(f"📍 Location: **{selected_folder}**")
+    
+    # Get folder ID and images
+    folder_id = dict(subfolders)[selected_folder]
+    subfolder_items = get_folder_contents(folder_id)
+    folder_images = [(name, id) for name, id, type in subfolder_items if type == 'image']
     
     # Filter Excel data
     if data_loaded:
@@ -101,7 +113,7 @@ if selected_folder:
             # Search bar
             search_term = st.text_input("🔍 Search:", placeholder="Type location code...")
             
-            # Filter based on search
+            # Filter Excel data
             if search_term:
                 filtered_data = location_data[location_data['location'].str.contains(search_term, case=False)]
             else:
@@ -110,42 +122,44 @@ if selected_folder:
             # Display records
             st.dataframe(filtered_data[['no', 'location', 'pallet_qr', 'is_pallet_present']])
             
-            # Get and display images for this folder
-            folder_id = folder_info[selected_folder]
-            try:
-                img_params = {
-                    'q': f"'{folder_id}' in parents and mimeType contains 'image/' and trashed=false",
-                    'fields': 'files(id, name)',
-                    'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'
-                }
+            # Display images
+            if folder_images:
+                st.markdown("### 📸 Images")
+                cols = st.columns(3)
                 
-                img_response = requests.get(api_url, params=img_params)
-                if img_response.status_code == 200:
-                    images = img_response.json().get('files', [])
-                    
-                    if images:
-                        st.markdown("### 📸 Images")
-                        cols = st.columns(3)
+                for idx, (img_name, img_id) in enumerate(folder_images):
+                    if search_term and search_term.lower() not in img_name.lower():
+                        continue
                         
-                        for idx, img in enumerate(images):
-                            if search_term and search_term.lower() not in img['name'].lower():
-                                continue
-                                
-                            with cols[idx % 3]:
-                                try:
-                                    img_url = f"https://drive.google.com/uc?export=view&id={img['id']}"
-                                    response = requests.get(img_url)
-                                    picture = Image.open(BytesIO(response.content))
-                                    st.image(picture, use_container_width=True)
-                                    st.caption(img['name'])
-                                except:
-                                    st.error(f"Failed to load")
-                    else:
-                        st.info("No images in this folder")
-            except Exception as e:
-                st.error(f"Error loading images: {e}")
+                    with cols[idx % 3]:
+                        try:
+                            img_url = f"https://drive.google.com/uc?export=view&id={img_id}"
+                            response = requests.get(img_url)
+                            img = Image.open(BytesIO(response.content))
+                            st.image(img, use_container_width=True)
+                            
+                            # Extract location code
+                            location_code = img_name.split('.')[0]
+                            
+                            # Show matching Excel data
+                            match = df[df['location'] == location_code]
+                            if not match.empty:
+                                row = match.iloc[0]
+                                qr = row.get('pallet_qr', '')
+                                if pd.notna(qr) and qr != '':
+                                    st.caption(f"QR: {qr[:15]}...")
+                                if row.get('is_pallet_present') == 'YES':
+                                    st.caption("✅ Present")
+                                else:
+                                    st.caption("❌ Empty")
+                            else:
+                                st.caption(img_name[:20])
+                        except Exception as e:
+                            st.error(f"Error")
+            else:
+                st.info("No images in this folder")
         else:
-            st.warning("No records found in Excel for this location")
+            st.warning("No Excel records for this location")
 else:
     st.info("👈 Select a location from the sidebar")
     
@@ -168,4 +182,4 @@ else:
                 st.metric("Empty Spots", no_count)
 
 st.markdown("---")
-st.caption("🏭 Warehouse Viewer - Automatically detects all folders")
+st.caption("🏭 Warehouse Viewer - Same logic for folders AND images")
