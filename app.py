@@ -1,8 +1,10 @@
 import streamlit as st
-import os
-from PIL import Image
-import glob
 import pandas as pd
+import os
+import requests
+from PIL import Image
+from io import BytesIO
+import re
 
 # Page setup
 st.set_page_config(
@@ -11,13 +13,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# Title
 st.title("🏭 Warehouse Location Image Viewer")
 st.markdown("---")
 
-# For Streamlit Cloud, files are in the same directory
-base_path = ""  # Current directory
-excel_path = "data.xlsx"  # Your Excel file
+# Google Drive folder ID (REPLACE WITH YOURS)
+FOLDER_ID = "PASTE_YOUR_FOLDER_ID_HERE"  # <-- Paste your folder ID here
+
+# Your Excel file is still in GitHub
+excel_path = "data.xlsx"
 
 # Load Excel data
 try:
@@ -34,73 +37,78 @@ except Exception as e:
     data_loaded = False
     st.sidebar.error(f"❌ Error loading Excel: {e}")
 
-# Get all location folders (SHA, SHB, SHC, etc.)
-if os.path.exists(base_path):
-    location_folders = [f for f in os.listdir(base_path) 
-                       if os.path.isdir(os.path.join(base_path, f))]
-    location_folders = [f for f in location_folders if f not in ['.git', '.streamlit']]
-    location_folders.sort()
-else:
-    location_folders = []
-    st.error(f"❌ Folder not found")
+# Function to get images from Google Drive folder
+@st.cache_data
+def get_images_from_drive():
+    """Get list of images from public Google Drive folder"""
+    # For now, we'll use a simplified approach
+    # You'll need to add your image file IDs here
+    
+    # This is a placeholder structure - you need to add your actual file IDs
+    folder_contents = {
+        "SHA": [
+            # Format: {"id": "FILE_ID", "name": "SHA_001_10.jpg"},
+        ],
+        "SHB": [
+            # Add your SHB files here
+        ],
+        "SHC": [
+            # Add your SHC files here
+        ]
+    }
+    return folder_contents
 
-# Sidebar for selection
+# Get folder contents
+folder_contents = get_images_from_drive()
+
+# Sidebar
 with st.sidebar:
     st.header("📍 Select Location")
     selected_folder = st.selectbox(
         "Choose location:",
-        options=[''] + location_folders
+        options=[''] + list(folder_contents.keys())
     )
     
     if selected_folder:
-        folder_path = os.path.join(base_path, selected_folder)
-        
-        # Find all images in this folder
-        image_files = []
-        for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.JPG']:
-            image_files.extend(glob.glob(os.path.join(folder_path, ext)))
-        
-        image_files.sort()
-        st.info(f"📸 Found **{len(image_files)}** images in {selected_folder}")
+        images = folder_contents[selected_folder]
+        st.info(f"📸 Found **{len(images)}** images in {selected_folder}")
 
 # Main content
 if selected_folder:
     st.subheader(f"📍 Location: **{selected_folder}**")
     
-    folder_path = os.path.join(base_path, selected_folder)
+    images = folder_contents[selected_folder]
     
-    # Find all images again
-    image_files = []
-    for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.JPG']:
-        image_files.extend(glob.glob(os.path.join(folder_path, ext)))
-    image_files.sort()
-    
-    if image_files:
+    if images:
         # Search bar
         search_term = st.text_input("🔍 Search images:", placeholder="Type location code...")
         
         # Filter images
         if search_term:
             filtered_images = []
-            for img_path in image_files:
-                if search_term.lower() in os.path.basename(img_path).lower():
-                    filtered_images.append(img_path)
+            for img in images:
+                if search_term.lower() in img['name'].lower():
+                    filtered_images.append(img)
             display_images = filtered_images
             st.write(f"📋 Found **{len(display_images)}** images matching '{search_term}'")
         else:
-            display_images = image_files
+            display_images = images
             st.write(f"📋 Showing all **{len(display_images)}** images")
         
         # Display in 3 columns
         cols = st.columns(3)
         
-        for idx, img_path in enumerate(display_images):
+        for idx, img_data in enumerate(display_images):
             with cols[idx % 3]:
                 try:
-                    img = Image.open(img_path)
+                    # Load image from Google Drive
+                    img_url = f"https://drive.google.com/drive/folders/1yUNa4AkLtY3JMIZbTSajNKGx-aWQdDiK?usp=sharing={img_data['id']}"
+                    response = requests.get(img_url)
+                    img = Image.open(BytesIO(response.content))
+                    
                     st.image(img, use_container_width=True)
                     
-                    filename = os.path.basename(img_path)
+                    filename = img_data['name']
                     
                     # Extract location code
                     location_code = None
@@ -123,15 +131,11 @@ if selected_folder:
                                 else:
                                     st.write("**Status:** ❌ Empty")
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Error loading image: {e}")
     else:
         st.warning("No images found")
 else:
     st.info("👈 Select a location from the sidebar")
-    
-    if data_loaded:
-        st.markdown("### 📊 Data Preview:")
-        st.dataframe(df.head(10))
 
 st.markdown("---")
 st.caption("🏭 Warehouse Viewer")
