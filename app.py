@@ -31,23 +31,35 @@ except Exception as e:
     df = pd.DataFrame()
     data_loaded = False
 
-# HARDCODED subfolders - YOU JUST LIST THEM ONCE
-subfolders = ["SHA", "SHB", "SHC"]  # <-- Add ALL your folder names here
+# FIRST: Get ALL subfolders automatically using the same logic
+# We'll store folder info here
+folder_info = {}  # folder_name -> folder_id
 
-# For each folder, we need image file IDs (get these once from Drive)
-# Format: folder_name -> list of (filename, file_id)
-image_data = {
-    "SHA": [
-        # ("SHA_001_10.jpg", "FILE_ID_HERE"),
-        # ("SHA_001_20.jpg", "FILE_ID_HERE"),
-    ],
-    "SHB": [
-        # ("SHB_001_10.jpg", "FILE_ID_HERE"),
-    ],
-    "SHC": [
-        # ("SHC_001_10.jpg", "FILE_ID_HERE"),
-    ]
-}
+try:
+    # Use the public Drive API to list folders
+    api_url = "https://www.googleapis.com/drive/v3/files"
+    params = {
+        'q': f"'{FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+        'fields': 'files(id, name)',
+        'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'  # Public test key
+    }
+    
+    response = requests.get(api_url, params=params)
+    if response.status_code == 200:
+        folders = response.json().get('files', [])
+        for folder in folders:
+            folder_info[folder['name']] = folder['id']
+        st.sidebar.success(f"✅ Automatically found {len(folder_info)} folders")
+    else:
+        st.error("Could not fetch folders. Make sure your main folder is public.")
+        st.stop()
+        
+except Exception as e:
+    st.error(f"Error scanning folders: {e}")
+    st.stop()
+
+# Get folder names automatically
+subfolders = list(folder_info.keys())
 
 # Sidebar
 with st.sidebar:
@@ -57,9 +69,25 @@ with st.sidebar:
         options=[''] + sorted(subfolders)
     )
     
-    if selected_folder and data_loaded:
-        location_records = df[df['location'].str.startswith(selected_folder, na=False)]
-        st.info(f"📊 {len(location_records)} records in Excel")
+    if selected_folder:
+        folder_id = folder_info[selected_folder]
+        
+        # Now get images in this folder
+        try:
+            img_params = {
+                'q': f"'{folder_id}' in parents and mimeType contains 'image/' and trashed=false",
+                'fields': 'files(id, name)',
+                'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'
+            }
+            
+            img_response = requests.get(api_url, params=img_params)
+            if img_response.status_code == 200:
+                images = img_response.json().get('files', [])
+                st.info(f"📸 {len(images)} images found")
+            else:
+                st.warning("Could not load images")
+        except:
+            st.warning("Error loading images")
 
 # Main content
 if selected_folder:
@@ -82,30 +110,42 @@ if selected_folder:
             # Display records
             st.dataframe(filtered_data[['no', 'location', 'pallet_qr', 'is_pallet_present']])
             
-            # Show images if we have them
-            if selected_folder in image_data and image_data[selected_folder]:
-                st.markdown("### 📸 Images")
-                cols = st.columns(3)
+            # Get and display images for this folder
+            folder_id = folder_info[selected_folder]
+            try:
+                img_params = {
+                    'q': f"'{folder_id}' in parents and mimeType contains 'image/' and trashed=false",
+                    'fields': 'files(id, name)',
+                    'key': 'AIzaSyB5BzrCpL9JxByQPLSjvQ-JFREjClLkYrs'
+                }
                 
-                folder_images = image_data[selected_folder]
-                for idx, (filename, file_id) in enumerate(folder_images):
-                    if search_term and search_term.lower() not in filename.lower():
-                        continue
+                img_response = requests.get(api_url, params=img_params)
+                if img_response.status_code == 200:
+                    images = img_response.json().get('files', [])
+                    
+                    if images:
+                        st.markdown("### 📸 Images")
+                        cols = st.columns(3)
                         
-                    with cols[idx % 3]:
-                        try:
-                            img_url = f"https://drive.google.com/uc?export=view&id={file_id}"
-                            response = requests.get(img_url)
-                            img = Image.open(BytesIO(response.content))
-                            st.image(img, use_container_width=True)
-                            st.caption(filename)
-                        except:
-                            st.error(f"Failed to load {filename}")
-            else:
-                # Just show folder link
-                st.info(f"📸 Add images or [open folder in Drive](https://drive.google.com/drive/folders/{FOLDER_ID}/{selected_folder})")
+                        for idx, img in enumerate(images):
+                            if search_term and search_term.lower() not in img['name'].lower():
+                                continue
+                                
+                            with cols[idx % 3]:
+                                try:
+                                    img_url = f"https://drive.google.com/uc?export=view&id={img['id']}"
+                                    response = requests.get(img_url)
+                                    picture = Image.open(BytesIO(response.content))
+                                    st.image(picture, use_container_width=True)
+                                    st.caption(img['name'])
+                                except:
+                                    st.error(f"Failed to load")
+                    else:
+                        st.info("No images in this folder")
+            except Exception as e:
+                st.error(f"Error loading images: {e}")
         else:
-            st.warning("No records found")
+            st.warning("No records found in Excel for this location")
 else:
     st.info("👈 Select a location from the sidebar")
     
@@ -128,4 +168,4 @@ else:
                 st.metric("Empty Spots", no_count)
 
 st.markdown("---")
-st.caption("🏭 Warehouse Viewer")
+st.caption("🏭 Warehouse Viewer - Automatically detects all folders")
