@@ -21,9 +21,9 @@ if search_term:
 else:
     filtered_df = df
 
-# 4. Hide the Direct_Link column for the UI table
-# Use this line to automatically hide the link column
-display_df = filtered_df.drop(columns=['Direct_Link'], errors='ignore')
+# 4. Filter for Display (Exclude the column named "Image Link")
+# This creates a table without the URL row, keeping your UI clean
+display_df = filtered_df.drop(columns=['Image Link'], errors='ignore')
 
 # 5. Display Table
 image_placeholder = st.empty()
@@ -38,9 +38,10 @@ event = st.dataframe(
 # 6. Display Image only when a row is clicked
 if event.selection["rows"]:
     selected_index = event.selection["rows"][0]
+    # We pull from filtered_df so we still have access to the "Image Link" column
     selected_row = filtered_df.iloc[selected_index]
-    img_link = selected_row.get("Direct_Link", "")
+    img_link = selected_row.get("Image Link", "")
     
     with image_placeholder.container():
-        if img_link and img_link.startswith("http"):
+        if isinstance(img_link, str) and img_link.startswith("http"):
             st.image(img_link, width=400)
