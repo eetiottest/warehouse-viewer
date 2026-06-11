@@ -1,20 +1,31 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="Warehouse Full v1")
+
+# Custom UI styling to match your AppSheet look
+st.html("""<style>
+    .appsheet-table-wrapper { width: 100%; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow-x: auto; margin-top: 15px; }
+    .appsheet-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .appsheet-table th { background-color: #F1F5F9; color: #475569; padding: 12px 16px; border-bottom: 2px solid #E2E8F0; text-transform: uppercase; font-size: 0.8rem; }
+    .appsheet-table td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+</style>""")
 
 @st.cache_data(ttl=600)
 def load_data():
-    # Replace this URL with the one you just generated from "Publish to web"
-    url = "https://docs.google.com/spreadsheets/d/14GQoIfWuN2FG0huZ9H96xJyiDLXmNle1vRBxvl_3PX4/pub?output=csv"
+    # This is the direct CSV link for your sheet
+    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQkarZ8ud6N-YO8aFTgIMidqO5uCbyKoqiIZaukL6Ql8K99XRX_-3cjmuGfaNWdOh8QHZWLP4-ePYuN/pub?output=csv"
     df = pd.read_csv(url)
     df.columns = df.columns.astype(str).str.strip()
     return df
 
+# Main logic
 try:
     df = load_data()
-    st.title("Warehouse Inventory Viewer")
-    st.table(df.head(10)) # Displays first 10 rows to verify
-    st.success("Successfully loaded data from Google Sheets!")
+    st.markdown("### 📂 Warehouse Full v1")
+    # Using your CSS wrapper for the dataframe
+    st.markdown('<div class="appsheet-table-wrapper">', unsafe_allow_html=True)
+    st.dataframe(df, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 except Exception as e:
-    st.error(f"Error loading data: {e}")
+    st.error(f"Could not load data: {e}")
