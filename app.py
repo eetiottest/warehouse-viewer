@@ -21,13 +21,14 @@ if search_term:
 else:
     filtered_df = df
 
-# 4. Filter for Display (Exclude the column named "Image Link")
-# This creates a table without the URL row, keeping your UI clean
+# 4. CRITICAL: Explicitly create the display dataframe by dropping the column
+# We are creating a brand new variable 'display_df' that 100% excludes that column
 display_df = filtered_df.drop(columns=['Image Link'], errors='ignore')
 
 # 5. Display Table
 image_placeholder = st.empty()
 
+# We pass 'display_df' (the cleaned version) to the table
 event = st.dataframe(
     display_df, 
     use_container_width=True, 
@@ -35,11 +36,12 @@ event = st.dataframe(
     on_select="rerun"
 )
 
-# 6. Display Image only when a row is clicked
+# 6. Display Image
 if event.selection["rows"]:
     selected_index = event.selection["rows"][0]
-    # We pull from filtered_df so we still have access to the "Image Link" column
+    # We pull the actual data from 'filtered_df' (which HAS the link)
     selected_row = filtered_df.iloc[selected_index]
+    
     img_link = selected_row.get("Image Link", "")
     
     with image_placeholder.container():
