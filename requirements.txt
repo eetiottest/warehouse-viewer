@@ -1,4 +1,2 @@
-streamlit>=1.0.0
+streamlit
 pandas
-openpyxl
-streamlit-gsheets
