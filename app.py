@@ -3,11 +3,11 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
-# Inject CSS to hide the selection checkbox column
+# CSS to hide the selection checkbox column
 hide_checkbox_css = """
     <style>
-    div[data-testid="stDataFrame"] div[data-testid="stTable"] thead th:first-child,
-    div[data-testid="stDataFrame"] div[data-testid="stTable"] tbody td:first-child {
+    div[data-testid="stDataFrame"] table thead tr th:first-child,
+    div[data-testid="stDataFrame"] table tbody tr td:first-child {
         display: none;
     }
     </style>
@@ -23,17 +23,19 @@ def load_data():
 
 df = load_data()
 
-# Drop columns
+# Drop the columns
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 st.subheader("Inventory Data")
 
 # Display the table
+# hide_index=True removes the row numbers
 event = st.dataframe(
     display_df, 
     use_container_width=True, 
     selection_mode="single-row", 
-    on_select="rerun"
+    on_select="rerun",
+    hide_index=True 
 )
 
 # Interaction: Clicking a row shows details
