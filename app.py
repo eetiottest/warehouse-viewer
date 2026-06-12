@@ -19,12 +19,9 @@ st.markdown(hide_checkbox_css, unsafe_allow_html=True)
 @st.cache_data(ttl=600)
 def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS290SM6SoFt8t3UJ2CcH18VKuLv8FldT8a8UO7Zp52Ov56Hf-I6ChIzjczsYCGVShran2PZSdlAQd5/pub?output=csv"
-    df = pd.read_csv(url)
+    # dtype=str forces all data to be read as text, preventing scientific notation
+    df = pd.read_csv(url, dtype=str) 
     df.columns = df.columns.str.strip()
-    
-    # FORCE ALL COLUMNS TO STRING TO PREVENT NUMBER FORMATTING
-    df = df.astype(str)
-    
     return df
 
 df = load_data()
@@ -53,5 +50,5 @@ if event.selection.get("rows"):
         for col in display_df.columns:
             c1, c2 = st.columns([1, 2])
             c1.markdown(f"**{col}**")
-            # Data is already string, so no extra conversion needed here
+            # row[col] is already a string due to dtype=str
             c2.write(row[col])
