@@ -21,18 +21,40 @@ total_pages = max(1, (len(display_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
 if 'page' not in st.session_state:
     st.session_state.page = 1
 
-# Search
-search = st.text_input("🔍 Search", placeholder="Type to filter...")
-filtered_df = display_df[display_df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)] if search else display_df
+# Search and Filter Section
+col1, col2 = st.columns([3, 1])
+with col1:
+    search = st.text_input("🔍 Search", placeholder="Type to filter...")
+with col2:
+    # Status filter dropdown
+    status_options = ["All", "Match", "Mismatch", "NA"]
+    status_filter = st.selectbox("Status", options=status_options)
+
+# Apply filters
+filtered_df = display_df.copy()
+
+# Apply search filter
+if search:
+    filtered_df = filtered_df[filtered_df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
+
+# Apply status filter
+if status_filter != "All":
+    if 'Status' in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df['Status'] == status_filter]
 
 # Page controls
+total_pages_filtered = max(1, (len(filtered_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
+
+# Reset page if current page > total pages
+if st.session_state.page > total_pages_filtered:
+    st.session_state.page = 1
+
 col1, col2, col3 = st.columns([1,2,1])
 with col1:
     if st.button("◀ Previous", disabled=st.session_state.page==1):
         st.session_state.page -= 1
         st.rerun()
 with col2:
-    total_pages_filtered = max(1, (len(filtered_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
     st.write(f"Page {st.session_state.page} of {total_pages_filtered}")
 with col3:
     if st.button("Next ▶", disabled=st.session_state.page==total_pages_filtered):
@@ -83,4 +105,13 @@ if event.selection.get("rows"):
         with col2:
             for col in display_df.columns:
                 value = row[col] if row[col] else ""
-                st.markdown(f"**{col}:** {value}")
+                # Highlight status field
+                if col == 'Status' and value:
+                    if value == 'Match':
+                        st.markdown(f"**{col}:** ✅ {value}")
+                    elif value == 'Mismatch':
+                        st.markdown(f"**{col}:** ❌ {value}")
+                    else:
+                        st.markdown(f"**{col}:** {value}")
+                else:
+                    st.markdown(f"**{col}:** {value}")
