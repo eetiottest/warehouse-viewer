@@ -3,119 +3,140 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
-# Custom CSS for better styling
+# Custom CSS with !important to override Streamlit defaults
 st.markdown("""
 <style>
-    /* Main background */
+    /* Force background colors */
     .stApp {
-        background-color: #ffffff;
+        background-color: #f3f4f6 !important;
     }
     
     /* Table styling */
     .stDataFrame {
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #e5e7eb;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        border: 1px solid #d1d5db !important;
     }
     
     /* Detail panel styling */
     .detail-container {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 24px;
-        margin-top: 20px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background: #ffffff !important;
+        border-radius: 12px !important;
+        padding: 24px !important;
+        margin-top: 20px !important;
+        border: 1px solid #d1d5db !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
     }
     
     .detail-title {
-        font-size: 20px;
-        font-weight: 600;
-        color: #111827;
-        margin-bottom: 20px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid #e5e7eb;
+        font-size: 20px !important;
+        font-weight: 600 !important;
+        color: #1f2937 !important;
+        margin-bottom: 20px !important;
+        padding-bottom: 12px !important;
+        border-bottom: 2px solid #e5e7eb !important;
     }
     
     .detail-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 12px;
-        margin-top: 16px;
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important;
+        gap: 12px !important;
+        margin-top: 16px !important;
     }
     
     .detail-card {
-        background: #f9fafb;
-        border-radius: 8px;
-        padding: 12px 16px;
-        border: 1px solid #e5e7eb;
+        background: #fefce8 !important;
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
+        border: 1px solid #fde047 !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .detail-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        background: #fef08a !important;
     }
     
     .detail-label {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #6b7280;
-        margin-bottom: 6px;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        color: #854d0e !important;
+        margin-bottom: 6px !important;
     }
     
     .detail-value {
-        font-size: 14px;
-        font-weight: 500;
-        color: #111827;
-        word-wrap: break-word;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #1f2937 !important;
+        word-wrap: break-word !important;
     }
     
     .status-match {
-        color: #059669;
-        font-weight: 600;
+        color: #16a34a !important;
+        font-weight: 700 !important;
+        background: #dcfce7 !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
     }
     
     .status-mismatch {
-        color: #dc2626;
-        font-weight: 600;
+        color: #dc2626 !important;
+        font-weight: 700 !important;
+        background: #fee2e2 !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
     }
     
     .status-na {
-        color: #6b7280;
-        font-weight: 500;
+        color: #6b7280 !important;
+        font-weight: 600 !important;
+        background: #f3f4f6 !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
     }
     
     .image-container {
-        background: #f9fafb;
-        border-radius: 8px;
-        padding: 16px;
-        text-align: center;
-        border: 1px solid #e5e7eb;
+        background: #fefce8 !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        text-align: center !important;
+        border: 1px solid #fde047 !important;
     }
     
     /* Search and filter styling */
     .stTextInput > div > div > input {
-        border-radius: 6px;
-        border: 1px solid #d1d5db;
+        border-radius: 6px !important;
+        border: 1px solid #eab308 !important;
+        background: #ffffff !important;
     }
     
     .stTextInput > div > div > input:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+        border-color: #ca8a04 !important;
+        box-shadow: 0 0 0 2px rgba(234,179,8,0.1) !important;
     }
     
     .stSelectbox > div > div {
-        border-radius: 6px;
+        border-radius: 6px !important;
+        border-color: #eab308 !important;
     }
     
-    /* Button styling */
-    .stButton > button {
-        border-radius: 6px;
-        background: #ffffff;
-        border: 1px solid #d1d5db;
-        color: #374151;
+    /* Table header styling */
+    thead th {
+        background: #fefce8 !important;
+        color: #854d0e !important;
+        font-weight: 600 !important;
     }
     
-    .stButton > button:hover {
-        background: #f9fafb;
-        border-color: #9ca3af;
+    /* Row hover effect */
+    tbody tr:hover {
+        background: #fef08a !important;
+        cursor: pointer !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -132,14 +153,14 @@ df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # Search and Filter Section
-st.markdown("### Inventory Management System")
+st.markdown("### 📦 Inventory Management System")
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    search = st.text_input("Search", placeholder="Type to filter by any field...")
+    search = st.text_input("🔍 Search", placeholder="Type to filter by any field...")
 with col2:
     status_options = ["All", "Match", "Mismatch", "NA"]
-    status_filter = st.selectbox("Status Filter", options=status_options)
+    status_filter = st.selectbox("🏷️ Status Filter", options=status_options)
 
 # Apply filters
 filtered_df = display_df.copy()
@@ -194,7 +215,7 @@ if event.selection.get("rows"):
             else:
                 st.image(image_url, use_container_width=True)
         else:
-            st.info("No image available")
+            st.info("📷 No image available")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
