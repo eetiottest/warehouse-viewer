@@ -17,57 +17,16 @@ st.markdown("""
         background-color: #f5f7fa;
     }
     
-    /* Header styling */
+    /* Header styling - minimal */
     .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem 2rem;
-        border-radius: 12px;
-        color: white;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
     }
     
     .main-header h1 {
         margin: 0;
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 600;
-    }
-    
-    .main-header p {
-        margin: 8px 0 0 0;
-        opacity: 0.9;
-        font-size: 14px;
-    }
-    
-    /* Stats cards */
-    .stat-card {
-        background: white;
-        padding: 1.2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        margin-bottom: 1rem;
-        border-left: 4px solid #667eea;
-        transition: transform 0.2s;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .stat-label {
-        font-size: 12px;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 600;
-    }
-    
-    .stat-value {
-        font-size: 28px;
-        font-weight: 700;
         color: #2c3e50;
-        margin-top: 8px;
     }
     
     /* Table styling */
@@ -175,7 +134,7 @@ st.markdown("""
     }
     
     .detail-header {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         color: #2c3e50;
         margin-bottom: 1.5rem;
@@ -216,45 +175,26 @@ st.markdown("""
         margin-bottom: 1rem;
     }
     
-    .search-box input {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        font-size: 14px;
-        transition: all 0.2s;
-    }
-    
-    .search-box input:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    
-    /* Badge styling */
-    .badge {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 600;
-    }
-    
-    .badge-success {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .badge-warning {
-        background: #fff3cd;
-        color: #856404;
-    }
-    
     /* Image styling */
     .detail-image {
         max-width: 100%;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Clear button styling */
+    .clear-btn {
+        background: white;
+        border: 1px solid #dee2e6;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+    
+    .clear-btn:hover {
+        background: #f8f9fc;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -278,60 +218,25 @@ if 'current_page' not in st.session_state:
 if 'search_term' not in st.session_state:
     st.session_state.search_term = ""
 
-# 5. Header Section
+# 5. Header Section - Minimal
 st.markdown("""
     <div class="main-header">
-        <h1>📦 Inventory Management System</h1>
-        <p>Real-time inventory tracking and management</p>
+        <h1>📦 Inventory Data</h1>
     </div>
 """, unsafe_allow_html=True)
 
-# 6. Stats Cards
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-label">Total Items</div>
-            <div class="stat-value">{len(df)}</div>
-        </div>
-    """, unsafe_allow_html=True)
-with col2:
-    st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-label">Categories</div>
-            <div class="stat-value">{df['Category'].nunique() if 'Category' in df.columns else 'N/A'}</div>
-        </div>
-    """, unsafe_allow_html=True)
-with col3:
-    st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-label">Locations</div>
-            <div class="stat-value">{df['Location'].nunique() if 'Location' in df.columns else 'N/A'}</div>
-        </div>
-    """, unsafe_allow_html=True)
-with col4:
-    st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-label">Last Updated</div>
-            <div class="stat-value" style="font-size: 14px;">Just Now</div>
-        </div>
-    """, unsafe_allow_html=True)
+# 6. Search Section
+search = st.text_input("🔍 Search inventory...", key="search_input", placeholder="Search by any field...")
+if search:
+    st.session_state.search_term = search
+    mask = display_df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)
+    filtered_df = display_df[mask].copy()
+    st.session_state.current_page = 1
+else:
+    st.session_state.search_term = ""
+    filtered_df = display_df.copy()
 
-# 7. Search and Filter Section
-col1, col2 = st.columns([3, 1])
-with col1:
-    search = st.text_input("🔍 Search inventory...", key="search_input", placeholder="Search by any field...")
-    if search:
-        st.session_state.search_term = search
-        # Apply search filter
-        mask = display_df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)
-        filtered_df = display_df[mask].copy()
-        st.session_state.current_page = 1  # Reset to first page on search
-    else:
-        st.session_state.search_term = ""
-        filtered_df = display_df.copy()
-
-# 8. Pagination Settings
+# 7. Pagination Settings
 ROWS_PER_PAGE = 50
 total_rows = len(filtered_df)
 total_pages = max(1, math.ceil(total_rows / ROWS_PER_PAGE))
@@ -345,7 +250,7 @@ start_idx = (st.session_state.current_page - 1) * ROWS_PER_PAGE
 end_idx = min(start_idx + ROWS_PER_PAGE, total_rows)
 page_df = filtered_df.iloc[start_idx:end_idx]
 
-# 9. Display Table
+# 8. Display Table
 st.markdown('<div class="data-table-wrapper">', unsafe_allow_html=True)
 
 # Build HTML table
@@ -359,56 +264,70 @@ for idx, (orig_idx, row) in enumerate(page_df.iterrows()):
     row_class = 'selected-row' if orig_idx == st.session_state.selected_row_id else ''
     html_table += f'<tr class="{row_class}" onclick="selectRow({orig_idx})" style="cursor: pointer;">'
     for col in page_df.columns:
-        html_table += f'<td>{row[col]}</td>'
+        # Truncate long text for better display
+        cell_value = str(row[col])
+        if len(cell_value) > 50:
+            cell_value = cell_value[:47] + "..."
+        html_table += f'<td>{cell_value}</td>'
     html_table += '</tr>'
 
 html_table += '</tbody></table>'
 st.markdown(html_table, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 10. Pagination Controls
+# 9. Pagination Controls
 col1, col2, col3 = st.columns([1, 2, 1])
 
 with col1:
-    st.markdown(f'<div class="page-info">Showing {start_idx + 1} to {min(end_idx, total_rows)} of {total_rows} items</div>', unsafe_allow_html=True)
+    if total_rows > 0:
+        st.markdown(f'<div class="page-info">Showing {start_idx + 1} to {min(end_idx, total_rows)} of {total_rows} items</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="page-info">No items found</div>', unsafe_allow_html=True)
 
 with col2:
-    # Pagination buttons
-    cols = st.columns([1, 1, 2, 1, 1])
-    with cols[0]:
-        if st.button("◀◀ First", disabled=(st.session_state.current_page == 1), key="first_page"):
-            st.session_state.current_page = 1
-            st.rerun()
-    with cols[1]:
-        if st.button("◀ Previous", disabled=(st.session_state.current_page == 1), key="prev_page"):
-            st.session_state.current_page -= 1
-            st.rerun()
-    
-    with cols[2]:
-        # Page selector
-        page_options = list(range(1, min(total_pages + 1, 11)))  # Show up to 10 pages
-        selected_page = st.selectbox(
-            "Page",
-            options=page_options,
-            index=st.session_state.current_page - 1 if st.session_state.current_page <= len(page_options) else 0,
-            key="page_select",
-            label_visibility="collapsed"
-        )
-        if selected_page != st.session_state.current_page:
-            st.session_state.current_page = selected_page
-            st.rerun()
-    
-    with cols[3]:
-        if st.button("Next ▶", disabled=(st.session_state.current_page == total_pages), key="next_page"):
-            st.session_state.current_page += 1
-            st.rerun()
-    with cols[4]:
-        if st.button("Last ▶▶", disabled=(st.session_state.current_page == total_pages), key="last_page"):
-            st.session_state.current_page = total_pages
+    if total_pages > 1:
+        # Pagination buttons
+        button_cols = st.columns([1, 1, 2, 1, 1])
+        with button_cols[0]:
+            if st.button("◀◀", disabled=(st.session_state.current_page == 1), key="first_page", help="First page"):
+                st.session_state.current_page = 1
+                st.rerun()
+        with button_cols[1]:
+            if st.button("◀", disabled=(st.session_state.current_page == 1), key="prev_page", help="Previous page"):
+                st.session_state.current_page -= 1
+                st.rerun()
+        
+        with button_cols[2]:
+            # Page selector
+            page_options = list(range(1, min(total_pages + 1, 11)))
+            selected_page = st.selectbox(
+                "Page",
+                options=page_options,
+                index=min(st.session_state.current_page - 1, len(page_options) - 1),
+                key="page_select",
+                label_visibility="collapsed"
+            )
+            if selected_page != st.session_state.current_page:
+                st.session_state.current_page = selected_page
+                st.rerun()
+        
+        with button_cols[3]:
+            if st.button("▶", disabled=(st.session_state.current_page == total_pages), key="next_page", help="Next page"):
+                st.session_state.current_page += 1
+                st.rerun()
+        with button_cols[4]:
+            if st.button("▶▶", disabled=(st.session_state.current_page == total_pages), key="last_page", help="Last page"):
+                st.session_state.current_page = total_pages
+                st.rerun()
+
+with col3:
+    if st.session_state.selected_row_id is not None:
+        if st.button("✕ Clear Selection", key="clear_selection"):
+            st.session_state.selected_row_id = None
             st.rerun()
 
-# 11. Detail View Panel
-if st.session_state.selected_row_id is not None:
+# 10. Detail View Panel
+if st.session_state.selected_row_id is not None and st.session_state.selected_row_id < len(df):
     row = df.iloc[st.session_state.selected_row_id]
     
     st.markdown('<div class="detail-panel">', unsafe_allow_html=True)
@@ -417,8 +336,10 @@ if st.session_state.selected_row_id is not None:
     col1, col2 = st.columns([1, 2])
     
     with col1:
-        if 'Image Link' in row and pd.notna(row['Image Link']):
+        if 'Image Link' in row and pd.notna(row['Image Link']) and row['Image Link']:
             st.image(row['Image Link'], use_column_width=True)
+        elif 'Image' in row and pd.notna(row['Image']) and row['Image']:
+            st.image(row['Image'], use_column_width=True)
         else:
             st.info("No image available")
     
@@ -426,10 +347,11 @@ if st.session_state.selected_row_id is not None:
         # Create a grid for details
         detail_html = '<div class="detail-grid">'
         for col in display_df.columns:
+            value = row[col] if pd.notna(row[col]) else "—"
             detail_html += f'''
                 <div class="detail-item">
                     <div class="detail-label">{col}</div>
-                    <div class="detail-value">{row[col]}</div>
+                    <div class="detail-value">{value}</div>
                 </div>
             '''
         detail_html += '</div>'
@@ -437,35 +359,18 @@ if st.session_state.selected_row_id is not None:
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 12. JavaScript for row selection
+# 11. JavaScript for row selection
 st.markdown("""
     <script>
     function selectRow(rowId) {
-        // Store selected row in Streamlit session state via rerun
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.id = 'selected_row_' + rowId;
-        document.body.appendChild(input);
-        
-        // Trigger Streamlit rerun with query parameter
         const url = new URL(window.location.href);
         url.searchParams.set('selected_row', rowId);
         window.location.href = url;
     }
-    
-    // Check URL for selected row on load
-    const urlParams = new URLSearchParams(window.location.search);
-    const selectedRow = urlParams.get('selected_row');
-    if (selectedRow) {
-        // Remove from URL without reloading
-        const newUrl = window.location.href.split('?')[0];
-        window.history.pushState({}, '', newUrl);
-    }
     </script>
 """, unsafe_allow_html=True)
 
-# Handle row selection from URL parameters (simpler approach)
-import streamlit as st
+# Handle row selection from URL parameters
 query_params = st.query_params
 if 'selected_row' in query_params:
     try:
@@ -474,12 +379,6 @@ if 'selected_row' in query_params:
             st.session_state.selected_row_id = selected
         # Clear the parameter
         st.query_params.clear()
+        st.rerun()
     except:
         pass
-
-# Alternative row selection using buttons (more reliable)
-# Add a clear selection button
-if st.session_state.selected_row_id is not None:
-    if st.button("Clear Selection", key="clear_selection"):
-        st.session_state.selected_row_id = None
-        st.rerun()
