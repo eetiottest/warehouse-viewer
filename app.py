@@ -6,52 +6,49 @@ st.set_page_config(layout="wide")
 # Custom CSS for better styling
 st.markdown("""
 <style>
+    /* Main background */
+    .stApp {
+        background-color: #ffffff;
+    }
+    
     /* Table styling */
     .stDataFrame {
-        border-radius: 10px;
+        border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
     }
     
     /* Detail panel styling */
     .detail-container {
-        background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+        background: #ffffff;
         border-radius: 12px;
         padding: 24px;
         margin-top: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border: 1px solid #e0e4e8;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     
     .detail-title {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 600;
-        color: #1e293b;
+        color: #111827;
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 3px solid #3b82f6;
-        display: inline-block;
+        border-bottom: 2px solid #e5e7eb;
     }
     
     .detail-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 16px;
-        margin-top: 20px;
+        gap: 12px;
+        margin-top: 16px;
     }
     
     .detail-card {
-        background: white;
+        background: #f9fafb;
         border-radius: 8px;
         padding: 12px 16px;
-        border-left: 4px solid #3b82f6;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .detail-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
     }
     
     .detail-label {
@@ -59,48 +56,66 @@ st.markdown("""
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        color: #64748b;
+        color: #6b7280;
         margin-bottom: 6px;
     }
     
     .detail-value {
         font-size: 14px;
         font-weight: 500;
-        color: #1e293b;
+        color: #111827;
         word-wrap: break-word;
     }
     
     .status-match {
-        color: #10b981;
+        color: #059669;
         font-weight: 600;
     }
     
     .status-mismatch {
-        color: #ef4444;
+        color: #dc2626;
         font-weight: 600;
     }
     
     .status-na {
-        color: #64748b;
+        color: #6b7280;
         font-weight: 500;
     }
     
     .image-container {
-        background: #f8fafc;
-        border-radius: 12px;
+        background: #f9fafb;
+        border-radius: 8px;
         padding: 16px;
         text-align: center;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #e5e7eb;
     }
     
     /* Search and filter styling */
     .stTextInput > div > div > input {
-        border-radius: 8px;
-        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
     }
     
     .stSelectbox > div > div {
-        border-radius: 8px;
+        border-radius: 6px;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        border-radius: 6px;
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        color: #374151;
+    }
+    
+    .stButton > button:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -117,14 +132,14 @@ df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # Search and Filter Section
-st.markdown("### 📊 Inventory Management System")
+st.markdown("### Inventory Management System")
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    search = st.text_input("🔍 Search", placeholder="Type to filter by any field...")
+    search = st.text_input("Search", placeholder="Type to filter by any field...")
 with col2:
     status_options = ["All", "Match", "Mismatch", "NA"]
-    status_filter = st.selectbox("🏷️ Status Filter", options=status_options)
+    status_filter = st.selectbox("Status Filter", options=status_options)
 
 # Apply filters
 filtered_df = display_df.copy()
@@ -179,17 +194,17 @@ if event.selection.get("rows"):
             else:
                 st.image(image_url, use_container_width=True)
         else:
-            st.info("📷 No image available")
+            st.info("No image available")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
         # Create grid of details
         detail_html = '<div class="detail-grid">'
         for col in display_df.columns:
-            value = row[col] if pd.notna(row[col]) and row[col] != '' else "—"
+            value = row[col] if pd.notna(row[col]) and row[col] != '' else ""
             
             # Add special styling for status
-            if col == 'Status' and value != "—":
+            if col == 'Status' and value:
                 if value.upper() == 'MATCH':
                     value_display = f'<span class="status-match">✅ {value}</span>'
                 elif value.upper() == 'MISMATCH':
@@ -199,7 +214,7 @@ if event.selection.get("rows"):
                 else:
                     value_display = value
             else:
-                value_display = value
+                value_display = value if value else "—"
             
             detail_html += f'''
                 <div class="detail-card">
