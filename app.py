@@ -22,4 +22,4 @@ display_df = df.drop(columns=cols_to_drop, errors='ignore')
 
 # 4. Display the Cleaned Table
 st.title("Warehouse Inventory Table")
-st.dataframe(display_df, use_container_width=False)
+st.dataframe(display_df, use_container_width=True)
