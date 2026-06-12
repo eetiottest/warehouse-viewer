@@ -19,14 +19,13 @@ st.markdown(hide_checkbox_css, unsafe_allow_html=True)
 @st.cache_data(ttl=600)
 def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS290SM6SoFt8t3UJ2CcH18VKuLv8FldT8a8UO7Zp52Ov56Hf-I6ChIzjczsYCGVShran2PZSdlAQd5/pub?output=csv"
-    # dtype=str forces all data to be read as text, preventing scientific notation
     df = pd.read_csv(url, dtype=str) 
     df.columns = df.columns.str.strip()
     return df
 
 df = load_data()
 
-# 4. Filter display columns
+# 4. Filter display columns for the main table
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 st.subheader("Inventory Data")
@@ -46,9 +45,12 @@ if event.selection.get("rows"):
     row = df.iloc[selected_index]
     
     with st.expander(f"Details for: {row.get('Location')}", expanded=True):
+        # Display the image first if available
+        if 'Image Link' in row and pd.notna(row['Image Link']):
+            st.image(row['Image Link'], width=300)
+        
         # Loop through columns and print as clean text
         for col in display_df.columns:
             c1, c2 = st.columns([1, 2])
             c1.markdown(f"**{col}**")
-            # row[col] is already a string due to dtype=str
             c2.write(row[col])
