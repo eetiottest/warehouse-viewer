@@ -19,4 +19,4 @@ display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # 4. Display the table
 # use_container_width=False forces natural width and restores the scrollbar
-st.dataframe(display_df, use_container_width=False)
+st.dataframe(display_df, use_container_width=True)
