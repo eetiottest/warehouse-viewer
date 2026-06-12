@@ -14,9 +14,22 @@ def load_data():
 
 df = load_data()
 
-# 3. Drop the columns
+# 3. Drop the columns for the table view
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # 4. Display the table
-# use_container_width=False forces natural width and restores the scrollbar
-st.dataframe(display_df, use_container_width=True)
+st.subheader("Inventory Data")
+event = st.dataframe(
+    display_df, 
+    use_container_width=True, 
+    selection_mode="single-row", 
+    on_select="rerun"
+)
+
+# 5. Mini-tab triggered by row selection
+if event.selection["rows"]:
+    selected_index = event.selection["rows"][0]
+    selected_row = df.iloc[selected_index]
+    
+    with st.expander("▶ Details for Location: " + str(selected_row.get("Location", "N/A")), expanded=True):
+        st.write(selected_row)
