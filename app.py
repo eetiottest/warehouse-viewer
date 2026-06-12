@@ -9,15 +9,15 @@ st.set_page_config(
     page_icon="📊"
 )
 
-# 2. Professional AppSheet-like CSS
+# 2. Professional CSS with proper color scheme
 st.markdown("""
     <style>
     /* Main container styling */
     .stApp {
-        background-color: #f5f7fa;
+        background-color: #f0f2f6;
     }
     
-    /* Header styling - minimal */
+    /* Header styling */
     .main-header {
         margin-bottom: 1.5rem;
     }
@@ -26,51 +26,68 @@ st.markdown("""
         margin: 0;
         font-size: 24px;
         font-weight: 600;
-        color: #2c3e50;
+        color: #1e293b;
     }
     
     /* Table styling */
     .data-table-wrapper {
         background: white;
         border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: auto;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
     }
     
     .data-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 13px;
+        font-size: 14px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     }
     
     .data-table th {
-        background: #f8f9fc;
-        color: #2c3e50;
-        padding: 14px 12px;
+        background: #f1f5f9;
+        color: #1e293b;
+        padding: 12px 16px;
         text-align: left;
         font-weight: 600;
-        border-bottom: 2px solid #e9ecef;
-        font-size: 12px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 13px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
     
     .data-table td {
-        padding: 12px;
-        border-bottom: 1px solid #e9ecef;
-        color: #495057;
+        padding: 12px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
     }
     
     .data-table tbody tr:hover {
-        background-color: #f8f9fc;
+        background-color: #f8fafc;
         cursor: pointer;
-        transition: background-color 0.2s;
     }
     
     .data-table tbody tr.selected-row {
-        background-color: #e7f1ff;
-        border-left: 3px solid #667eea;
+        background-color: #e0f2fe;
+        border-left: 3px solid #0284c7;
+    }
+    
+    /* Search box styling */
+    .stTextInput > div > div > input {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #0284c7;
+        box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.1);
     }
     
     /* Pagination styling */
@@ -79,48 +96,32 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         padding: 1rem 0;
-        background: white;
-        border-radius: 8px;
-        margin-top: 1rem;
-    }
-    
-    .pagination-buttons {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-    
-    .page-btn {
-        background: white;
-        border: 1px solid #dee2e6;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.2s;
-        color: #495057;
-    }
-    
-    .page-btn:hover {
-        background: #667eea;
-        color: white;
-        border-color: #667eea;
-    }
-    
-    .page-btn.active {
-        background: #667eea;
-        color: white;
-        border-color: #667eea;
-    }
-    
-    .page-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
     }
     
     .page-info {
-        color: #6c757d;
+        color: #64748b;
+        font-size: 14px;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        background: white;
+        border: 1px solid #cbd5e1;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-size: 13px;
+        color: #334155;
+        transition: all 0.2s;
+    }
+    
+    .stButton > button:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+    
+    .stButton > button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
     
     /* Detail panel styling */
@@ -129,17 +130,17 @@ st.markdown("""
         border-radius: 12px;
         padding: 1.5rem;
         margin-top: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-top: 4px solid #667eea;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
     .detail-header {
         font-size: 18px;
         font-weight: 600;
-        color: #2c3e50;
+        color: #1e293b;
         margin-bottom: 1.5rem;
         padding-bottom: 0.75rem;
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 2px solid #e2e8f0;
     }
     
     .detail-grid {
@@ -150,8 +151,9 @@ st.markdown("""
     
     .detail-item {
         padding: 0.75rem;
-        background: #f8f9fc;
+        background: #f8fafc;
         border-radius: 8px;
+        border: 1px solid #e2e8f0;
     }
     
     .detail-label {
@@ -159,42 +161,27 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 0.5px;
         font-weight: 600;
-        color: #6c757d;
+        color: #64748b;
         margin-bottom: 0.5rem;
     }
     
     .detail-value {
         font-size: 14px;
-        color: #2c3e50;
+        color: #1e293b;
         font-weight: 500;
         word-wrap: break-word;
     }
     
-    /* Search box styling */
-    .search-box {
-        margin-bottom: 1rem;
-    }
-    
-    /* Image styling */
-    .detail-image {
-        max-width: 100%;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    /* Clear button styling */
-    .clear-btn {
+    /* Selectbox styling */
+    .stSelectbox > div > div {
         background: white;
-        border: 1px solid #dee2e6;
-        padding: 6px 12px;
+        border: 1px solid #cbd5e1;
         border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.2s;
     }
     
-    .clear-btn:hover {
-        background: #f8f9fc;
+    /* Clear button specific */
+    .clear-btn {
+        color: #64748b;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -205,6 +192,10 @@ def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS290SM6SoFt8t3UJ2CcH18VKuLv8FldT8a8UO7Zp52Ov56Hf-I6ChIzjczsYCGVShran2PZSdlAQd5/pub?output=csv"
     df = pd.read_csv(url, dtype=str)
     df.columns = df.columns.str.strip()
+    # Replace NaN and None with empty string
+    df = df.fillna('')
+    df = df.replace('nan', '', regex=True)
+    df = df.replace('None', '', regex=True)
     return df
 
 df = load_data()
@@ -218,7 +209,7 @@ if 'current_page' not in st.session_state:
 if 'search_term' not in st.session_state:
     st.session_state.search_term = ""
 
-# 5. Header Section - Minimal
+# 5. Header Section
 st.markdown("""
     <div class="main-header">
         <h1>📦 Inventory Data</h1>
@@ -253,7 +244,7 @@ page_df = filtered_df.iloc[start_idx:end_idx]
 # 8. Display Table
 st.markdown('<div class="data-table-wrapper">', unsafe_allow_html=True)
 
-# Build HTML table
+# Build HTML table with proper empty value handling
 html_table = '<table class="data-table">'
 html_table += '<thead><tr>'
 for col in page_df.columns:
@@ -264,14 +255,17 @@ for idx, (orig_idx, row) in enumerate(page_df.iterrows()):
     row_class = 'selected-row' if orig_idx == st.session_state.selected_row_id else ''
     html_table += f'<tr class="{row_class}" onclick="selectRow({orig_idx})" style="cursor: pointer;">'
     for col in page_df.columns:
-        # Truncate long text for better display
         cell_value = str(row[col])
-        if len(cell_value) > 50:
+        # Handle empty values
+        if cell_value == '' or cell_value == 'nan' or cell_value == 'None' or pd.isna(row[col]):
+            cell_value = ''
+        # Truncate long text for better display
+        elif len(cell_value) > 50:
             cell_value = cell_value[:47] + "..."
-        html_table += f'<td>{cell_value}</td>'
+        html_table += f'<td style="color: #334155;">{cell_value}</td>'
     html_table += '</tr>'
 
-html_table += '</tbody></table>'
+html_table += '</tbody></tr>'
 st.markdown(html_table, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -336,10 +330,16 @@ if st.session_state.selected_row_id is not None and st.session_state.selected_ro
     col1, col2 = st.columns([1, 2])
     
     with col1:
-        if 'Image Link' in row and pd.notna(row['Image Link']) and row['Image Link']:
-            st.image(row['Image Link'], use_column_width=True)
-        elif 'Image' in row and pd.notna(row['Image']) and row['Image']:
-            st.image(row['Image'], use_column_width=True)
+        if 'Image Link' in row and row['Image Link'] and str(row['Image Link']).strip():
+            try:
+                st.image(str(row['Image Link']), use_column_width=True)
+            except:
+                st.info("Unable to load image")
+        elif 'Image' in row and row['Image'] and str(row['Image']).strip():
+            try:
+                st.image(str(row['Image']), use_column_width=True)
+            except:
+                st.info("Unable to load image")
         else:
             st.info("No image available")
     
@@ -347,7 +347,7 @@ if st.session_state.selected_row_id is not None and st.session_state.selected_ro
         # Create a grid for details
         detail_html = '<div class="detail-grid">'
         for col in display_df.columns:
-            value = row[col] if pd.notna(row[col]) else "—"
+            value = row[col] if pd.notna(row[col]) and str(row[col]).strip() else "—"
             detail_html += f'''
                 <div class="detail-item">
                     <div class="detail-label">{col}</div>
