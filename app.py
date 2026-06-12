@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
@@ -17,31 +17,24 @@ display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # Calculate status counts for pie chart
 if 'Status' in df.columns:
-    status_counts = df['Status'].value_counts()
-    # Ensure Match, Mismatch, NA are captured (case-insensitive)
     match_count = df[df['Status'].str.upper() == 'MATCH'].shape[0]
     mismatch_count = df[df['Status'].str.upper() == 'MISMATCH'].shape[0]
     na_count = df[df['Status'].str.upper() == 'NA'].shape[0]
     
-    # Create pie chart
-    pie_data = pd.DataFrame({
-        'Status': ['Match', 'Mismatch', 'NA'],
-        'Count': [match_count, mismatch_count, na_count]
-    })
-    
-    # Only show if there's data
-    if pie_data['Count'].sum() > 0:
-        fig = px.pie(pie_data, values='Count', names='Status', 
-                     title='Status Distribution',
-                     color='Status',
-                     color_discrete_map={
-                         'Match': '#10b981',
-                         'Mismatch': '#ef4444',
-                         'NA': '#f59e0b'
-                     })
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
+    # Create pie chart with matplotlib
+    if match_count + mismatch_count + na_count > 0:
+        fig, ax = plt.subplots()
+        sizes = [match_count, mismatch_count, na_count]
+        labels = ['Match', 'Mismatch', 'NA']
+        colors = ['#10b981', '#ef4444', '#f59e0b']
+        explode = (0.05, 0.05, 0.05)
+        
+        ax.pie(sizes, explode=explode, labels=labels, colors=colors,
+               autopct='%1.1f%%', shadow=False, startangle=90)
+        ax.axis('equal')
+        ax.set_title('Status Distribution', fontsize=14, fontweight='bold')
+        
+        st.pyplot(fig)
         st.divider()
 
 # Search and Filter Section
@@ -99,7 +92,6 @@ if event.selection.get("rows"):
         with col2:
             for col in display_df.columns:
                 value = row[col] if row[col] else ""
-                # Add emoji for status
                 if col == 'Status' and value:
                     if value.upper() == 'MATCH':
                         st.markdown(f"**{col}:** ✅ {value}")
