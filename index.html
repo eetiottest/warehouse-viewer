@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Warehouse Inventory</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        #image-viewer { text-align: center; }
+        img { max-width: 400px; border: 2px solid #333; }
+    </style>
+</head>
+<body>
+
+    <h2>Inventory Table</h2>
+    <div id="table-container">Loading...</div>
+    
+    <div id="image-viewer">
+        <h3>Selected Item Image</h3>
+        <div id="img-display">Click a row to see the image</div>
+    </div>
+
+    <script>
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS290SM6SoFt8t3UJ2CcH18VKuLv8FldT8a8UO7Zp52Ov56Hf-I6ChIzjczsYCGVShran2PZSdlAQd5/pub?output=csv";
+
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                renderTable(results.data);
+            }
+        });
+
+        function renderTable(data) {
+            let html = '<table><thead><tr>';
+            // Create Headers (Excluding Image column)
+            Object.keys(data[0]).forEach(key => {
+                if(key !== "Image" && key !== "Image Link") html += `<th>${key}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            // Create Rows
+            data.forEach((row, index) => {
+                html += `<tr onclick="showImage('${row.Image || row['Image Link']}')" style="cursor:pointer">`;
+                Object.keys(row).forEach(key => {
+                    if(key !== "Image" && key !== "Image Link") html += `<td>${row[key]}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById('table-container').innerHTML = html;
+        }
+
+        function showImage(link) {
+            if(!link) return;
+            // Convert Google Drive view link to direct image link
+            let id = link.includes("/d/") ? link.split("/d/")[1].split("/")[0] : "";
+            let src = id ? `https://drive.google.com/uc?export=view&id=${id}` : link;
+            document.getElementById('img-display').innerHTML = `<img src="${src}" alt="Item Image">`;
+        }
+    </script>
+</body>
+</html>
