@@ -14,13 +14,6 @@ def load_data():
 df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
-# Pagination
-ROWS_PER_PAGE = 50
-total_pages = max(1, (len(display_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
-
-if 'page' not in st.session_state:
-    st.session_state.page = 1
-
 # Search and Filter Section
 col1, col2 = st.columns([3, 1])
 with col1:
@@ -42,31 +35,9 @@ if status_filter != "All":
     if 'Status' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df['Status'].str.upper() == status_filter.upper()]
 
-# Page controls
-total_pages_filtered = max(1, (len(filtered_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
-
-# Reset page if current page > total pages
-if st.session_state.page > total_pages_filtered:
-    st.session_state.page = 1
-
-col1, col2, col3 = st.columns([1,2,1])
-with col1:
-    if st.button("◀ Previous", disabled=st.session_state.page==1):
-        st.session_state.page -= 1
-        st.rerun()
-with col2:
-    st.write(f"Page {st.session_state.page} of {total_pages_filtered}")
-with col3:
-    if st.button("Next ▶", disabled=st.session_state.page==total_pages_filtered):
-        st.session_state.page += 1
-        st.rerun()
-
 # Display table
-start = (st.session_state.page - 1) * ROWS_PER_PAGE
-page_df = filtered_df.iloc[start:start + ROWS_PER_PAGE]
-
 event = st.dataframe(
-    page_df,
+    filtered_df,
     use_container_width=True,
     selection_mode="single-row",
     on_select="rerun",
@@ -76,8 +47,7 @@ event = st.dataframe(
 # Show details when row selected
 if event.selection.get("rows"):
     selected_index = event.selection["rows"][0]
-    actual_index = filtered_df.index[start + selected_index]
-    row = df.iloc[actual_index]
+    row = df.iloc[selected_index]
     
     with st.expander("📋 Item Details", expanded=True):
         col1, col2 = st.columns([1, 2])
