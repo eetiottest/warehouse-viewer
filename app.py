@@ -1,7 +1,19 @@
 import streamlit as st
 import pandas as pd
 
-# 1. Data Loading
+st.set_page_config(layout="wide")
+
+# Inject CSS to hide the selection checkbox column
+hide_checkbox_css = """
+    <style>
+    div[data-testid="stDataFrame"] div[data-testid="stTable"] thead th:first-child,
+    div[data-testid="stDataFrame"] div[data-testid="stTable"] tbody td:first-child {
+        display: none;
+    }
+    </style>
+"""
+st.markdown(hide_checkbox_css, unsafe_allow_html=True)
+
 @st.cache_data(ttl=600)
 def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS290SM6SoFt8t3UJ2CcH18VKuLv8FldT8a8UO7Zp52Ov56Hf-I6ChIzjczsYCGVShran2PZSdlAQd5/pub?output=csv"
@@ -11,28 +23,25 @@ def load_data():
 
 df = load_data()
 
-# 2. Logic to handle the "click"
-# We store the selected location in the session state
-if 'selected_location' not in st.session_state:
-    st.session_state.selected_location = None
+# Drop columns
+display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 st.subheader("Inventory Data")
 
-# 3. Manual Table Builder (This is 100% clean, no checkboxes)
-# We loop through the dataframe and create a button for each location
-for index, row in df.iterrows():
-    # We display the Location as a button. When pressed, it updates the session state
-    if st.button(f"{row['Location']}", key=f"btn_{index}"):
-        st.session_state.selected_location = index
+# Display the table
+event = st.dataframe(
+    display_df, 
+    use_container_width=True, 
+    selection_mode="single-row", 
+    on_select="rerun"
+)
 
-# 4. Show details if a location was pressed
-if st.session_state.selected_location is not None:
-    idx = st.session_state.selected_location
-    row = df.iloc[idx]
+# Interaction: Clicking a row shows details
+if event.selection.get("rows"):
+    selected_index = event.selection["rows"][0]
+    selected_row = df.iloc[selected_index]
     
-    # Filter out columns we don't want
-    details = row.drop(labels=['Image', 'Image Link'], errors='ignore')
+    details = selected_row.drop(labels=['Image', 'Image Link'], errors='ignore')
     
-    st.divider()
-    with st.expander(f"Details for: {row['Location']}", expanded=True):
+    with st.expander(f"Details for: {selected_row.get('Location')}", expanded=True):
         st.write(details)
