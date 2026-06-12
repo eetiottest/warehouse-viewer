@@ -15,35 +15,43 @@ def load_data():
 df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
-# Calculate status counts for pie chart
-if 'Status' in df.columns:
-    match_count = df[df['Status'].str.upper() == 'MATCH'].shape[0]
-    mismatch_count = df[df['Status'].str.upper() == 'MISMATCH'].shape[0]
-    na_count = df[df['Status'].str.upper() == 'NA'].shape[0]
-    
-    # Create pie chart with matplotlib
-    if match_count + mismatch_count + na_count > 0:
-        fig, ax = plt.subplots()
-        sizes = [match_count, mismatch_count, na_count]
-        labels = ['Match', 'Mismatch', 'NA']
-        colors = ['#10b981', '#ef4444', '#f59e0b']
-        explode = (0.05, 0.05, 0.05)
-        
-        ax.pie(sizes, explode=explode, labels=labels, colors=colors,
-               autopct='%1.1f%%', shadow=False, startangle=90)
-        ax.axis('equal')
-        ax.set_title('Status Distribution', fontsize=14, fontweight='bold')
-        
-        st.pyplot(fig)
-        st.divider()
+# Initialize session state for pie chart visibility
+if 'show_pie' not in st.session_state:
+    st.session_state.show_pie = False
 
 # Search and Filter Section
-col1, col2 = st.columns([3, 1])
+col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     search = st.text_input("🔍 Search", placeholder="Type to filter...")
 with col2:
     status_options = ["All", "Match", "Mismatch", "NA"]
     status_filter = st.selectbox("Status", options=status_options)
+with col3:
+    if st.button("📊 Show Stats"):
+        st.session_state.show_pie = not st.session_state.show_pie
+        st.rerun()
+
+# Show pie chart when button is clicked
+if st.session_state.show_pie:
+    if 'Status' in df.columns:
+        match_count = df[df['Status'].str.upper() == 'MATCH'].shape[0]
+        mismatch_count = df[df['Status'].str.upper() == 'MISMATCH'].shape[0]
+        na_count = df[df['Status'].str.upper() == 'NA'].shape[0]
+        
+        if match_count + mismatch_count + na_count > 0:
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sizes = [match_count, mismatch_count, na_count]
+            labels = ['Match', 'Mismatch', 'NA']
+            colors = ['#10b981', '#ef4444', '#f59e0b']
+            explode = (0.05, 0.05, 0.05)
+            
+            ax.pie(sizes, explode=explode, labels=labels, colors=colors,
+                   autopct='%1.1f%%', shadow=False, startangle=90)
+            ax.axis('equal')
+            ax.set_title('Status Distribution', fontsize=12, fontweight='bold')
+            
+            st.pyplot(fig)
+            st.divider()
 
 # Apply filters
 filtered_df = display_df.copy()
