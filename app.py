@@ -14,10 +14,6 @@ def load_data():
 df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
-# Initialize selected row
-if 'selected_row' not in st.session_state:
-    st.session_state.selected_row = None
-
 # Search and Filter Section
 col1, col2 = st.columns([3, 1])
 with col1:
@@ -39,38 +35,19 @@ if status_filter != "All":
     if 'Status' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df['Status'].str.upper() == status_filter.upper()]
 
-# Add a column with arrow buttons
-filtered_df_with_buttons = filtered_df.copy()
-filtered_df_with_buttons.insert(0, ' ', ['▶'] * len(filtered_df))
-
-# Display table with custom button column
+# Display table
 event = st.dataframe(
-    filtered_df_with_buttons,
+    filtered_df,
     use_container_width=True,
     selection_mode="single-row",
     on_select="rerun",
-    hide_index=True,
-    column_config={
-        ' ': st.column_config.TextColumn(' ', width='small')
-    }
+    hide_index=True
 )
 
 # Show details when row selected
 if event.selection.get("rows"):
     selected_index = event.selection["rows"][0]
-    actual_index = filtered_df.index[selected_index]
-    
-    if st.session_state.selected_row == actual_index:
-        # Toggle off if same row
-        st.session_state.selected_row = None
-    else:
-        # Set new selected row
-        st.session_state.selected_row = actual_index
-        st.rerun()
-
-# Display detail view for selected row
-if st.session_state.selected_row is not None:
-    row = df.iloc[st.session_state.selected_row]
+    row = df.iloc[selected_index]
     
     with st.expander("📋 Item Details", expanded=True):
         col1, col2 = st.columns([1, 2])
@@ -110,8 +87,3 @@ if st.session_state.selected_row is not None:
                         st.markdown(f"**{col}:** {value}")
                 else:
                     st.markdown(f"**{col}:** {value}")
-    
-    # Add close button
-    if st.button("Close Details"):
-        st.session_state.selected_row = None
-        st.rerun()
