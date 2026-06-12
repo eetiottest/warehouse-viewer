@@ -14,6 +14,16 @@ def load_data():
 df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
+# DEBUG: Show what's in the Image Link column
+if 'Image Link' in df.columns:
+    st.write("### Debug: First 5 Image Links")
+    for i, link in enumerate(df['Image Link'].head(5)):
+        st.write(f"{i}: {link}")
+    
+    st.write("### Debug: First 5 Image URLs")
+    for i, link in enumerate(df['Image'].head(5)):
+        st.write(f"{i}: {link}")
+
 # Pagination
 ROWS_PER_PAGE = 50
 total_pages = max(1, (len(display_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
@@ -43,7 +53,6 @@ with col3:
 start = (st.session_state.page - 1) * ROWS_PER_PAGE
 page_df = filtered_df.iloc[start:start + ROWS_PER_PAGE]
 
-# Simple clickable table using dataframe with selection
 event = st.dataframe(
     page_df,
     use_container_width=True,
@@ -61,31 +70,20 @@ if event.selection.get("rows"):
     with st.expander("📋 Item Details", expanded=True):
         col1, col2 = st.columns([1, 2])
         with col1:
-            # Try to get image from both possible columns
-            image_url = None
-            if 'Image Link' in row and row['Image Link']:
-                image_url = row['Image Link']
-            elif 'Image' in row and row['Image']:
-                image_url = row['Image']
+            # Show both raw URLs for debugging
+            st.write("**Image Link column:**", row.get('Image Link', 'MISSING'))
+            st.write("**Image column:**", row.get('Image', 'MISSING'))
+            
+            image_url = row.get('Image Link', '') or row.get('Image', '')
             
             if image_url:
-                # Fix common Google Drive/Sheet image issues
-                if 'drive.google.com' in image_url:
-                    # Convert Google Drive link to direct download
-                    if 'id=' in image_url:
-                        file_id = image_url.split('id=')[1].split('&')[0]
-                        image_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-                    elif '/d/' in image_url:
-                        file_id = image_url.split('/d/')[1].split('/')[0]
-                        image_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-                
+                st.write("**Trying to load:**", image_url)
                 try:
                     st.image(image_url, width=300)
-                except:
-                    st.warning("⚠️ Could not load image")
-                    st.caption(f"Image URL: {image_url[:100]}...")
+                except Exception as e:
+                    st.error(f"Error: {e}")
             else:
-                st.info("No image available")
+                st.info("No image URL found")
         
         with col2:
             for col in display_df.columns:
