@@ -63,11 +63,20 @@ if event.selection.get("rows"):
             # Get the Google Drive image link
             image_url = row.get('Image Link', '')
             if image_url:
-                # Fix Google Drive URL to work with Streamlit
-                if 'export=view' in image_url:
-                    # Change export=view to export=download
-                    image_url = image_url.replace('export=view', 'export=download')
-                st.image(image_url, width=300)
+                # Extract file ID from Google Drive URL
+                if 'id=' in image_url:
+                    file_id = image_url.split('id=')[1].split('&')[0]
+                elif '/d/' in image_url:
+                    file_id = image_url.split('/d/')[1].split('/')[0]
+                else:
+                    file_id = None
+                
+                if file_id:
+                    # Use Google's direct image serving URL
+                    direct_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+                    st.image(direct_url, width=300)
+                else:
+                    st.image(image_url, width=300)
             else:
                 st.info("No image available")
         
