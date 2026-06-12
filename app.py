@@ -14,22 +14,23 @@ def load_data():
 
 df = load_data()
 
-# 3. Drop the columns for the table view
+# 3. Drop columns for table view
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # 4. Display the table
 st.subheader("Inventory Data")
-event = st.dataframe(
-    display_df, 
-    use_container_width=True, 
-    selection_mode="single-row", 
-    on_select="rerun"
-)
+st.dataframe(display_df, use_container_width=True)
 
-# 5. Mini-tab triggered by row selection
-if event.selection["rows"]:
-    selected_index = event.selection["rows"][0]
-    selected_row = df.iloc[selected_index]
+# 5. "Triangle" Button Logic
+# This button acts as a trigger to view details for a specific index
+# We use a text input to pick the row by ID/Index
+row_to_view = st.number_input("Enter Row Number to view details:", min_value=0, max_value=len(df)-1, step=1)
+
+if st.button("▶ Open Details"):
+    selected_row = df.iloc[row_to_view]
     
-    with st.expander("▶ Details for Location: " + str(selected_row.get("Location", "N/A")), expanded=True):
-        st.write(selected_row)
+    # We clean the data for display by dropping the columns here too
+    details = selected_row.drop(labels=['Image', 'Image Link'], errors='ignore')
+    
+    with st.expander("Details", expanded=True):
+        st.write(details)
