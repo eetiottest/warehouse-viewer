@@ -33,14 +33,15 @@ with col2:
 # Apply filters
 filtered_df = display_df.copy()
 
-# Apply search filter
+# Apply search filter (case-insensitive)
 if search:
     filtered_df = filtered_df[filtered_df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
 
-# Apply status filter
+# Apply status filter (case-insensitive)
 if status_filter != "All":
     if 'Status' in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df['Status'] == status_filter]
+        # Convert both sides to same case for comparison
+        filtered_df = filtered_df[filtered_df['Status'].str.upper() == status_filter.upper()]
 
 # Page controls
 total_pages_filtered = max(1, (len(filtered_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
@@ -105,12 +106,12 @@ if event.selection.get("rows"):
         with col2:
             for col in display_df.columns:
                 value = row[col] if row[col] else ""
-                # Highlight status field
+                # Highlight status field with case-insensitive matching
                 if col == 'Status' and value:
-                    if value == 'Match':
-                        st.markdown(f"**{col}:** ✅ {value}")
-                    elif value == 'Mismatch':
-                        st.markdown(f"**{col}:** ❌ {value}")
+                    if value.upper() == 'MATCH':
+                        st.markdown(f"**{col}:** ✅ Match")
+                    elif value.upper() == 'MISMATCH':
+                        st.markdown(f"**{col}:** ❌ Mismatch")
                     else:
                         st.markdown(f"**{col}:** {value}")
                 else:
