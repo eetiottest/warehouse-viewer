@@ -78,20 +78,19 @@ if event.selection.get("rows"):
             for i, col in enumerate(display_df.columns):
                 value = row[col] if pd.notna(row[col]) and row[col] != '' else ""
                 
-                # Add emoji for status
-                if col == 'Status' and value:
-                    if value.upper() == 'MATCH':
-                        display_value = f"✅ {value}"
-                    elif value.upper() == 'MISMATCH':
-                        display_value = f"❌ {value}"
-                    elif value.upper() == 'NA':
-                        display_value = f"⚠️ {value}"
-                    else:
-                        display_value = value
-                else:
-                    display_value = value if value else "—"
-                
                 with cols[i % 2]:
                     st.markdown(f"**{col}**")
-                    st.write(display_value)
+                    
+                    # Add colored text for status
+                    if col == 'Status' and value:
+                        if value.upper() == 'MATCH':
+                            st.markdown(f'<p style="color: #10b981; font-weight: 600;">✅ {value}</p>', unsafe_allow_html=True)
+                        elif value.upper() == 'MISMATCH':
+                            st.markdown(f'<p style="color: #ef4444; font-weight: 600;">❌ {value}</p>', unsafe_allow_html=True)
+                        elif value.upper() == 'NA':
+                            st.markdown(f'<p style="color: #f59e0b; font-weight: 600;">⚠️ {value}</p>', unsafe_allow_html=True)
+                        else:
+                            st.write(value if value else "—")
+                    else:
+                        st.write(value if value else "—")
                     st.divider()
