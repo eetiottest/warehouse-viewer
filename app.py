@@ -3,6 +3,108 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
+# Custom CSS for better styling
+st.markdown("""
+<style>
+    /* Table styling */
+    .stDataFrame {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    /* Detail panel styling */
+    .detail-container {
+        background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+        border-radius: 12px;
+        padding: 24px;
+        margin-top: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid #e0e4e8;
+    }
+    
+    .detail-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 3px solid #3b82f6;
+        display: inline-block;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+    }
+    
+    .detail-card {
+        background: white;
+        border-radius: 8px;
+        padding: 12px 16px;
+        border-left: 4px solid #3b82f6;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .detail-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .detail-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+    
+    .detail-value {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e293b;
+        word-wrap: break-word;
+    }
+    
+    .status-match {
+        color: #10b981;
+        font-weight: 600;
+    }
+    
+    .status-mismatch {
+        color: #ef4444;
+        font-weight: 600;
+    }
+    
+    .status-na {
+        color: #64748b;
+        font-weight: 500;
+    }
+    
+    .image-container {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+    }
+    
+    /* Search and filter styling */
+    .stTextInput > div > div > input {
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+    }
+    
+    .stSelectbox > div > div {
+        border-radius: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Load data - explicitly keep 'NA' as string
 @st.cache_data(ttl=600)
 def load_data():
@@ -15,25 +117,27 @@ df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # Search and Filter Section
+st.markdown("### 📊 Inventory Management System")
+
 col1, col2 = st.columns([3, 1])
 with col1:
-    search = st.text_input("🔍 Search", placeholder="Type to filter...")
+    search = st.text_input("🔍 Search", placeholder="Type to filter by any field...")
 with col2:
-    # Status filter dropdown
     status_options = ["All", "Match", "Mismatch", "NA"]
-    status_filter = st.selectbox("Status", options=status_options)
+    status_filter = st.selectbox("🏷️ Status Filter", options=status_options)
 
 # Apply filters
 filtered_df = display_df.copy()
 
-# Apply search filter (case-insensitive)
 if search:
     filtered_df = filtered_df[filtered_df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
 
-# Apply status filter
 if status_filter != "All":
     if 'Status' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df['Status'].str.upper() == status_filter.upper()]
+
+# Display count
+st.caption(f"Showing {len(filtered_df)} items")
 
 # Display table
 event = st.dataframe(
@@ -49,41 +153,61 @@ if event.selection.get("rows"):
     selected_index = event.selection["rows"][0]
     row = df.iloc[selected_index]
     
-    with st.expander("📋 Item Details", expanded=True):
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            # Get the Google Drive image link
-            image_url = row.get('Image Link', '')
-            if image_url and image_url.strip():
-                # Extract file ID from Google Drive URL
-                if 'id=' in image_url:
-                    file_id = image_url.split('id=')[1].split('&')[0]
-                elif '/d/' in image_url:
-                    file_id = image_url.split('/d/')[1].split('/')[0]
-                else:
-                    file_id = None
-                
-                if file_id:
-                    # Use Google's direct image serving URL
-                    direct_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
-                    st.image(direct_url, width=500)
-                else:
-                    st.image(image_url, width=500)
+    # HTML Detail View
+    st.markdown('<div class="detail-container">', unsafe_allow_html=True)
+    
+    # Title with location
+    location = row.get('Location', 'Item')
+    st.markdown(f'<div class="detail-title">📦 {location}</div>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([1, 1.5])
+    
+    with col1:
+        st.markdown('<div class="image-container">', unsafe_allow_html=True)
+        image_url = row.get('Image Link', '')
+        if image_url and image_url.strip():
+            if 'id=' in image_url:
+                file_id = image_url.split('id=')[1].split('&')[0]
+            elif '/d/' in image_url:
+                file_id = image_url.split('/d/')[1].split('/')[0]
             else:
-                st.info("No image available")
-        
-        with col2:
-            for col in display_df.columns:
-                value = row[col] if pd.notna(row[col]) and row[col] != '' else ""
-                # Highlight status field
-                if col == 'Status' and value:
-                    if value.upper() == 'MATCH':
-                        st.markdown(f"**{col}:** ✅ Match")
-                    elif value.upper() == 'MISMATCH':
-                        st.markdown(f"**{col}:** ❌ Mismatch")
-                    elif value.upper() == 'NA':
-                        st.markdown(f"**{col}:** NA")
-                    else:
-                        st.markdown(f"**{col}:** {value}")
+                file_id = None
+            
+            if file_id:
+                direct_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+                st.image(direct_url, use_container_width=True)
+            else:
+                st.image(image_url, use_container_width=True)
+        else:
+            st.info("📷 No image available")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        # Create grid of details
+        detail_html = '<div class="detail-grid">'
+        for col in display_df.columns:
+            value = row[col] if pd.notna(row[col]) and row[col] != '' else "—"
+            
+            # Add special styling for status
+            if col == 'Status' and value != "—":
+                if value.upper() == 'MATCH':
+                    value_display = f'<span class="status-match">✅ {value}</span>'
+                elif value.upper() == 'MISMATCH':
+                    value_display = f'<span class="status-mismatch">❌ {value}</span>'
+                elif value.upper() == 'NA':
+                    value_display = f'<span class="status-na">⚠️ {value}</span>'
                 else:
-                    st.markdown(f"**{col}:** {value}")
+                    value_display = value
+            else:
+                value_display = value
+            
+            detail_html += f'''
+                <div class="detail-card">
+                    <div class="detail-label">{col}</div>
+                    <div class="detail-value">{value_display}</div>
+                </div>
+            '''
+        detail_html += '</div>'
+        st.markdown(detail_html, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
