@@ -74,13 +74,13 @@ if event.selection.get("rows"):
                 if file_id:
                     # Use Google's direct image serving URL
                     direct_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
-                    st.image(direct_url, width=400)  # Increased from 300 to 400
+                    st.image(direct_url, width=500)
                 else:
-                    st.image(image_url, width=400)
+                    st.image(image_url, width=500)
             else:
                 st.info("No image available")
         
         with col2:
             for col in display_df.columns:
-                value = row[col] if row[col] else ""  # Changed from "—" to empty string
+                value = row[col] if row[col] else ""
                 st.markdown(f"**{col}:** {value}")
