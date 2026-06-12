@@ -23,13 +23,10 @@ def load_data():
 
 df = load_data()
 
-# Drop the columns
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 st.subheader("Inventory Data")
 
-# Display the table
-# hide_index=True removes the row numbers
 event = st.dataframe(
     display_df, 
     use_container_width=True, 
@@ -38,7 +35,6 @@ event = st.dataframe(
     hide_index=True 
 )
 
-# Interaction: Clicking a row shows details
 if event.selection.get("rows"):
     selected_index = event.selection["rows"][0]
     selected_row = df.iloc[selected_index]
@@ -46,4 +42,4 @@ if event.selection.get("rows"):
     details = selected_row.drop(labels=['Image', 'Image Link'], errors='ignore')
     
     with st.expander(f"Details for: {selected_row.get('Location')}", expanded=True):
-        st.write(details)
+        st.table(details.to_frame(name="Value").transpose().reset_index(drop=True))
