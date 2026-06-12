@@ -14,23 +14,39 @@ def load_data():
 
 df = load_data()
 
-# 3. Drop columns for table view
+# 3. Drop columns for display
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
-# 4. Display the table
+# 4. Add a "Details" button column to the dataframe
+# This will render as an arrow button in the table
+display_df.insert(0, "View", "▶") 
+
+# 5. Display the Table
 st.subheader("Inventory Data")
-st.dataframe(display_df, use_container_width=True)
 
-# 5. "Triangle" Button Logic
-# This button acts as a trigger to view details for a specific index
-# We use a text input to pick the row by ID/Index
-row_to_view = st.number_input("Enter Row Number to view details:", min_value=0, max_value=len(df)-1, step=1)
+event = st.dataframe(
+    display_df,
+    use_container_width=True,
+    column_config={
+        "View": st.column_config.Column(
+            "Details", 
+            help="Click to open", 
+            width="small"
+        ),
+    },
+    hide_index=True
+)
 
-if st.button("▶ Open Details"):
-    selected_row = df.iloc[row_to_view]
+# 6. Interaction Logic
+# When the user clicks the "View" column, we show the details below the table
+# Note: Since Streamlit tables are read-only for clicks, we check for a selection
+# or use the last clicked row index.
+if event.selection["rows"]:
+    selected_index = event.selection["rows"][0]
+    selected_row = df.iloc[selected_index]
     
-    # We clean the data for display by dropping the columns here too
+    # Exclude the image columns from the display details
     details = selected_row.drop(labels=['Image', 'Image Link'], errors='ignore')
     
-    with st.expander("Details", expanded=True):
-        st.write(details)
+    with st.expander("Details for: " + str(selected_row.get("Location", "Selected Item")), expanded=True):
+        st.table(details)
