@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
-# Load data - explicitly keep 'NA' as string
+# Load data
 @st.cache_data(ttl=600)
 def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS290SM6SoFt8t3UJ2CcH18VKuLv8FldT8a8UO7Zp52Ov56Hf-I6ChIzjczsYCGVShran2PZSdlAQd5/pub?output=csv"
@@ -15,14 +15,12 @@ df = load_data()
 display_df = df.drop(columns=['Image', 'Image Link'], errors='ignore')
 
 # Search and Filter Section
-st.markdown("### 📦 Inventory Management System")
-
 col1, col2 = st.columns([3, 1])
 with col1:
-    search = st.text_input("🔍 Search", placeholder="Type to filter by any field...")
+    search = st.text_input("🔍 Search", placeholder="Type to filter...")
 with col2:
     status_options = ["All", "Match", "Mismatch", "NA"]
-    status_filter = st.selectbox("Status Filter", options=status_options)
+    status_filter = st.selectbox("Status", options=status_options)
 
 # Apply filters
 filtered_df = display_df.copy()
@@ -33,9 +31,6 @@ if search:
 if status_filter != "All":
     if 'Status' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df['Status'].str.upper() == status_filter.upper()]
-
-# Display count
-st.caption(f"Showing {len(filtered_df)} items")
 
 # Display table
 event = st.dataframe(
@@ -52,11 +47,10 @@ if event.selection.get("rows"):
     row = df.iloc[selected_index]
     
     with st.expander("📋 Item Details", expanded=True):
-        tab1, tab2 = st.tabs(["📷 Image", "📄 Details"])
-        
-        with tab1:
+        col1, col2 = st.columns([1, 2])
+        with col1:
             image_url = row.get('Image Link', '')
-            if image_url and image_url.strip():
+            if image_url:
                 if 'id=' in image_url:
                     file_id = image_url.split('id=')[1].split('&')[0]
                 elif '/d/' in image_url:
@@ -72,25 +66,7 @@ if event.selection.get("rows"):
             else:
                 st.info("No image available")
         
-        with tab2:
-            # Create two columns for details
-            cols = st.columns(2)
-            for i, col in enumerate(display_df.columns):
-                value = row[col] if pd.notna(row[col]) and row[col] != '' else ""
-                
-                with cols[i % 2]:
-                    st.markdown(f"**{col}**")
-                    
-                    # Add colored text for status
-                    if col == 'Status' and value:
-                        if value.upper() == 'MATCH':
-                            st.markdown(f'<p style="color: #10b981; font-weight: 600;">✅ {value}</p>', unsafe_allow_html=True)
-                        elif value.upper() == 'MISMATCH':
-                            st.markdown(f'<p style="color: #ef4444; font-weight: 600;">❌ {value}</p>', unsafe_allow_html=True)
-                        elif value.upper() == 'NA':
-                            st.markdown(f'<p style="color: #f59e0b; font-weight: 600;">⚠️ {value}</p>', unsafe_allow_html=True)
-                        else:
-                            st.write(value if value else "—")
-                    else:
-                        st.write(value if value else "—")
-                    st.divider()
+        with col2:
+            for col in display_df.columns:
+                value = row[col] if row[col] else ""
+                st.markdown(f"**{col}:** {value}")
