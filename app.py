@@ -32,9 +32,10 @@ with col1:
         st.session_state.page -= 1
         st.rerun()
 with col2:
-    st.write(f"Page {st.session_state.page} of {total_pages}")
+    total_pages_filtered = max(1, (len(filtered_df) + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
+    st.write(f"Page {st.session_state.page} of {total_pages_filtered}")
 with col3:
-    if st.button("Next ▶", disabled=st.session_state.page==total_pages):
+    if st.button("Next ▶", disabled=st.session_state.page==total_pages_filtered):
         st.session_state.page += 1
         st.rerun()
 
@@ -60,8 +61,33 @@ if event.selection.get("rows"):
     with st.expander("📋 Item Details", expanded=True):
         col1, col2 = st.columns([1, 2])
         with col1:
+            # Try to get image from both possible columns
+            image_url = None
             if 'Image Link' in row and row['Image Link']:
-                st.image(row['Image Link'], width=300)
+                image_url = row['Image Link']
+            elif 'Image' in row and row['Image']:
+                image_url = row['Image']
+            
+            if image_url:
+                # Fix common Google Drive/Sheet image issues
+                if 'drive.google.com' in image_url:
+                    # Convert Google Drive link to direct download
+                    if 'id=' in image_url:
+                        file_id = image_url.split('id=')[1].split('&')[0]
+                        image_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+                    elif '/d/' in image_url:
+                        file_id = image_url.split('/d/')[1].split('/')[0]
+                        image_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+                
+                try:
+                    st.image(image_url, width=300)
+                except:
+                    st.warning("⚠️ Could not load image")
+                    st.caption(f"Image URL: {image_url[:100]}...")
+            else:
+                st.info("No image available")
+        
         with col2:
             for col in display_df.columns:
-                st.markdown(f"**{col}:** {row[col]}")
+                value = row[col] if row[col] else "—"
+                st.markdown(f"**{col}:** {value}")
