@@ -3,11 +3,11 @@ import pandas as pd
 
 st.set_page_config(layout="wide")
 
-# Load data
+# Load data - explicitly keep 'NA' as string
 @st.cache_data(ttl=600)
 def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS290SM6SoFt8t3UJ2CcH18VKuLv8FldT8a8UO7Zp52Ov56Hf-I6ChIzjczsYCGVShran2PZSdlAQd5/pub?output=csv"
-    df = pd.read_csv(url, dtype=str).fillna('')
+    df = pd.read_csv(url, dtype=str, keep_default_na=False)
     df.columns = df.columns.str.strip()
     return df
 
@@ -37,10 +37,9 @@ filtered_df = display_df.copy()
 if search:
     filtered_df = filtered_df[filtered_df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
 
-# Apply status filter (case-insensitive)
+# Apply status filter
 if status_filter != "All":
     if 'Status' in filtered_df.columns:
-        # Convert both sides to same case for comparison
         filtered_df = filtered_df[filtered_df['Status'].str.upper() == status_filter.upper()]
 
 # Page controls
@@ -85,7 +84,7 @@ if event.selection.get("rows"):
         with col1:
             # Get the Google Drive image link
             image_url = row.get('Image Link', '')
-            if image_url:
+            if image_url and image_url.strip():
                 # Extract file ID from Google Drive URL
                 if 'id=' in image_url:
                     file_id = image_url.split('id=')[1].split('&')[0]
@@ -105,13 +104,15 @@ if event.selection.get("rows"):
         
         with col2:
             for col in display_df.columns:
-                value = row[col] if row[col] else ""
-                # Highlight status field with case-insensitive matching
+                value = row[col] if pd.notna(row[col]) and row[col] != '' else ""
+                # Highlight status field
                 if col == 'Status' and value:
                     if value.upper() == 'MATCH':
                         st.markdown(f"**{col}:** ✅ Match")
                     elif value.upper() == 'MISMATCH':
                         st.markdown(f"**{col}:** ❌ Mismatch")
+                    elif value.upper() == 'NA':
+                        st.markdown(f"**{col}:** NA")
                     else:
                         st.markdown(f"**{col}:** {value}")
                 else:
